@@ -14,7 +14,9 @@ import {
   RefreshCcw,
   Archive,
   Download,
-  Eye
+  Eye,
+  Copy,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -438,6 +440,11 @@ export default function Admin() {
                 </div>
               )}
 
+              {/* Bank Details */}
+              {selectedTicket.profiles && (
+                <BankDetailsSection profile={selectedTicket.profiles as any} />
+              )}
+
               {/* Proof Image */}
               {selectedTicket.proof_url && (
                 <div>
@@ -689,6 +696,69 @@ function AdminSettings() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Copyable field component
+function CopyableField({ label, value }: { label: string; value: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      toast.success(`${label} copied!`);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  if (!value) return null;
+
+  return (
+    <div className="flex items-center justify-between gap-2 py-1.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium truncate">{value}</p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={handleCopy}
+      >
+        {copied ? (
+          <Check className="h-4 w-4 text-success" />
+        ) : (
+          <Copy className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  );
+}
+
+// Bank details section
+function BankDetailsSection({ profile }: { profile: Profile }) {
+  const hasBankDetails = profile.bank_name || profile.bank_account_number || profile.ifsc_code || profile.upi_id;
+
+  if (!hasBankDetails) {
+    return (
+      <div className="p-3 rounded-lg border border-dashed border-border">
+        <p className="text-sm text-muted-foreground text-center">No bank details provided</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 rounded-lg border border-border space-y-1">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Bank Details</p>
+      <CopyableField label="Bank Name" value={profile.bank_name} />
+      <CopyableField label="Account Number" value={profile.bank_account_number} />
+      <CopyableField label="IFSC Code" value={profile.ifsc_code} />
+      <CopyableField label="UPI ID" value={profile.upi_id} />
     </div>
   );
 }
