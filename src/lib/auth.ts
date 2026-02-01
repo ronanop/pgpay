@@ -26,7 +26,7 @@ export async function signUp(email: string, password: string, phone: string, nam
   return { data, error };
 }
 
-export async function signIn(phone: string, password: string) {
+export async function signInWithPhone(phone: string, password: string) {
   // First, find the email associated with this phone number
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -40,6 +40,15 @@ export async function signIn(phone: string, password: string) {
   
   const { data, error } = await supabase.auth.signInWithPassword({
     email: profile.email,
+    password,
+  });
+  
+  return { data, error };
+}
+
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
     password,
   });
   
