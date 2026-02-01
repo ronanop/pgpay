@@ -3,19 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Eye, EyeOff, Wallet } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Wallet, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { signIn, signUp } from '@/lib/auth';
+import { signInWithPhone, signInWithEmail, signUp } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { CountryCodeSelect, countryCodes, CountryCode } from '@/components/ui/country-code-select';
 
-const loginSchema = z.object({
+const phoneLoginSchema = z.object({
   phone: z.string()
     .nonempty('Phone number is required')
-    .regex(/^\+?[0-9]{10,15}$/, 'Enter a valid phone number'),
+    .regex(/^[0-9]{6,14}$/, 'Enter a valid phone number (digits only)'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters'),
+});
+
+const emailLoginSchema = z.object({
+  email: z.string()
+    .nonempty('Email is required')
+    .email('Enter a valid email address'),
   password: z.string()
     .min(6, 'Password must be at least 6 characters'),
 });
@@ -30,7 +39,7 @@ const signupSchema = z.object({
     .email('Enter a valid email address'),
   phone: z.string()
     .nonempty('Phone number is required')
-    .regex(/^\+?[0-9]{10,15}$/, 'Enter a valid phone number'),
+    .regex(/^[0-9]{6,14}$/, 'Enter a valid phone number (digits only)'),
   password: z.string()
     .min(6, 'Password must be at least 6 characters')
     .max(72, 'Password must be less than 72 characters'),
@@ -40,7 +49,8 @@ const signupSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type PhoneLoginFormData = z.infer<typeof phoneLoginSchema>;
+type EmailLoginFormData = z.infer<typeof emailLoginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function Auth() {
@@ -49,9 +59,15 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
+  const [countryCode, setCountryCode] = useState<CountryCode>(countryCodes[0]); // Default to India
 
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  const phoneLoginForm = useForm<PhoneLoginFormData>({
+    resolver: zodResolver(phoneLoginSchema),
+  });
+
+  const emailLoginForm = useForm<EmailLoginFormData>({
+    resolver: zodResolver(emailLoginSchema),
   });
 
   const signupForm = useForm<SignupFormData>({
@@ -64,10 +80,28 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleLogin = async (data: LoginFormData) => {
+  const handlePhoneLogin = async (data: PhoneLoginFormData) => {
     setLoading(true);
     try {
-      const { error } = await signIn(data.phone, data.password);
+      const fullPhone = `${countryCode.dial}${data.phone}`;
+      const { error } = await signInWithPhone(fullPhone, data.password);
+      if (error) {
+        toast.error(error.message || 'Failed to sign in');
+        return;
+      }
+      toast.success('Welcome back!');
+      navigate('/', { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (data: EmailLoginFormData) => {
+    setLoading(true);
+    try {
+      const { error } = await signInWithEmail(data.email, data.password);
       if (error) {
         toast.error(error.message || 'Failed to sign in');
         return;
@@ -84,7 +118,8 @@ export default function Auth() {
   const handleSignup = async (data: SignupFormData) => {
     setLoading(true);
     try {
-      const { error } = await signUp(data.email, data.password, data.phone, data.name);
+      const fullPhone = `${countryCode.dial}${data.phone}`;
+      const { error } = await signUp(data.email, data.password, fullPhone, data.name);
       if (error) {
         if (error.message?.includes('already registered')) {
           toast.error('This email is already registered. Please sign in instead.');
@@ -132,54 +167,141 @@ export default function Auth() {
           </TabsList>
 
           <TabsContent value="login" className="space-y-4">
-            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-phone">Phone Number</Label>
-                <Input
-                  id="login-phone"
-                  type="tel"
-                  placeholder="+1234567890"
-                  {...loginForm.register('phone')}
-                />
-                {loginForm.formState.errors.phone && (
-                  <p className="text-sm text-destructive">
-                    {loginForm.formState.errors.phone.message}
-                  </p>
-                )}
-              </div>
+            {/* Login Method Toggle */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <button
+                type="button"
+                onClick={() => setLoginMethod('phone')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  loginMethod === 'phone'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Phone className="h-4 w-4" />
+                Phone
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginMethod('email')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  loginMethod === 'email'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Mail className="h-4 w-4" />
+                Email
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...loginForm.register('password')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            {loginMethod === 'phone' ? (
+              <form onSubmit={phoneLoginForm.handleSubmit(handlePhoneLogin)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-phone">Phone Number</Label>
+                  <div className="flex gap-2">
+                    <CountryCodeSelect
+                      value={countryCode}
+                      onChange={setCountryCode}
+                      disabled={loading}
+                    />
+                    <Input
+                      id="login-phone"
+                      type="tel"
+                      placeholder="9876543210"
+                      className="flex-1"
+                      {...phoneLoginForm.register('phone')}
+                    />
+                  </div>
+                  {phoneLoginForm.formState.errors.phone && (
+                    <p className="text-sm text-destructive">
+                      {phoneLoginForm.formState.errors.phone.message}
+                    </p>
+                  )}
                 </div>
-                {loginForm.formState.errors.password && (
-                  <p className="text-sm text-destructive">
-                    {loginForm.formState.errors.password.message}
-                  </p>
-                )}
-              </div>
 
-              <Button type="submit" className="w-full h-12" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password-phone">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="login-password-phone"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...phoneLoginForm.register('password')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {phoneLoginForm.formState.errors.password && (
+                    <p className="text-sm text-destructive">
+                      {phoneLoginForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full h-12" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={emailLoginForm.handleSubmit(handleEmailLogin)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    {...emailLoginForm.register('email')}
+                  />
+                  {emailLoginForm.formState.errors.email && (
+                    <p className="text-sm text-destructive">
+                      {emailLoginForm.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-password-email">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="login-password-email"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...emailLoginForm.register('password')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {emailLoginForm.formState.errors.password && (
+                    <p className="text-sm text-destructive">
+                      {emailLoginForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full h-12" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+            )}
           </TabsContent>
 
           <TabsContent value="signup" className="space-y-4">
@@ -216,12 +338,20 @@ export default function Auth() {
 
               <div className="space-y-2">
                 <Label htmlFor="signup-phone">Phone Number</Label>
-                <Input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="+1234567890"
-                  {...signupForm.register('phone')}
-                />
+                <div className="flex gap-2">
+                  <CountryCodeSelect
+                    value={countryCode}
+                    onChange={setCountryCode}
+                    disabled={loading}
+                  />
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="9876543210"
+                    className="flex-1"
+                    {...signupForm.register('phone')}
+                  />
+                </div>
                 {signupForm.formState.errors.phone && (
                   <p className="text-sm text-destructive">
                     {signupForm.formState.errors.phone.message}
