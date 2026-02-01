@@ -445,46 +445,51 @@ export default function Admin() {
                 <BankDetailsSection profile={selectedTicket.profiles as any} />
               )}
 
-              {/* Proof Image */}
-              {selectedTicket.proof_url && (
-                <div>
-                  <Label className="mb-2 block">Payment Proof</Label>
-                  {loadingProofImage ? (
-                    <div className="w-full h-48 flex items-center justify-center rounded-lg border bg-muted">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : proofImageUrl ? (
-                    <a 
-                      href={proofImageUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <img 
-                        src={proofImageUrl} 
-                        alt="Payment proof" 
-                        className="w-full h-48 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                        <Download className="h-3 w-3" />
-                        Click to view/download full size
-                      </p>
-                    </a>
-                  ) : (
-                    <div className="w-full h-48 flex items-center justify-center rounded-lg border bg-muted text-muted-foreground">
-                      <p className="text-sm">Failed to load image</p>
+              {/* Proof Image & User Notes - Side by Side */}
+              {(selectedTicket.proof_url || selectedTicket.notes) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Proof Image */}
+                  {selectedTicket.proof_url && (
+                    <div className="flex flex-col">
+                      <Label className="mb-2 block">Payment Proof</Label>
+                      {loadingProofImage ? (
+                        <div className="flex-1 min-h-[120px] flex items-center justify-center rounded-lg border bg-muted">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : proofImageUrl ? (
+                        <a 
+                          href={proofImageUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block flex-1"
+                        >
+                          <img 
+                            src={proofImageUrl} 
+                            alt="Payment proof" 
+                            className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Download className="h-3 w-3" />
+                            View full size
+                          </p>
+                        </a>
+                      ) : (
+                        <div className="flex-1 min-h-[120px] flex items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+                          <p className="text-sm">Failed to load</p>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Notes */}
-              {selectedTicket.notes && (
-                <div>
-                  <Label className="mb-2 block">User Notes</Label>
-                  <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                    {selectedTicket.notes}
-                  </p>
+                  {/* User Notes */}
+                  {selectedTicket.notes && (
+                    <div className="flex flex-col">
+                      <Label className="mb-2 block">User Notes</Label>
+                      <div className="flex-1 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg min-h-[120px]">
+                        {selectedTicket.notes}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
