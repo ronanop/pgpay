@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, LogOut, Save, User, Building, CreditCard } from 'lucide-react';
+import { Loader2, LogOut, Save, User, Building, CreditCard, Lock, Pencil } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getProfile, updateProfile, signOut } from '@/lib/auth';
 import { Profile as ProfileType } from '@/types/database';
 import { toast } from 'sonner';
+import { PasswordConfirmDialog } from '@/components/profile/PasswordConfirmDialog';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
@@ -30,6 +31,8 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [bankDetailsLocked, setBankDetailsLocked] = useState(true);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -55,6 +58,11 @@ export default function Profile() {
       if (error) throw error;
       
       setProfile(data);
+      
+      // Check if bank details already exist - if so, lock them
+      const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name || data?.upi_id);
+      setBankDetailsLocked(hasBankDetails);
+      
       reset({
         name: data?.name || '',
         bank_account_number: data?.bank_account_number || '',
@@ -67,6 +75,17 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const hasSavedBankDetails = !!(profile?.bank_account_number || profile?.ifsc_code || profile?.bank_name || profile?.upi_id);
+
+  const handleUnlockBankDetails = () => {
+    setShowPasswordDialog(true);
+  };
+
+  const onPasswordConfirmed = () => {
+    setBankDetailsLocked(false);
+    toast.success('Bank details unlocked for editing');
   };
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -85,7 +104,7 @@ export default function Profile() {
       if (error) throw error;
       
       toast.success('Profile updated successfully!');
-      fetchProfile();
+      fetchProfile(); // This will re-lock bank details
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile');
     } finally {
@@ -163,12 +182,34 @@ export default function Profile() {
 
           {/* Bank Details */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Building className="h-4 w-4 text-muted-foreground" />
-              <h2 className="font-semibold">Bank Details</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-semibold">Bank Details</h2>
+              </div>
+              {hasSavedBankDetails && bankDetailsLocked && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUnlockBankDetails}
+                  className="gap-1.5"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Unlock to Edit
+                </Button>
+              )}
+              {hasSavedBankDetails && !bankDetailsLocked && (
+                <div className="flex items-center gap-1.5 text-sm text-green-600">
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editing enabled
+                </div>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Store your bank details for receiving refunds
+              {hasSavedBankDetails && bankDetailsLocked 
+                ? 'Your bank details are protected. Unlock with password to edit.'
+                : 'Store your bank details for receiving refunds'}
             </p>
             
             <div className="space-y-3">
@@ -177,6 +218,7 @@ export default function Profile() {
                 <Input
                   id="bank_name"
                   placeholder="e.g., State Bank of India"
+                  disabled={hasSavedBankDetails && bankDetailsLocked}
                   {...register('bank_name')}
                 />
                 {errors.bank_name && (
@@ -189,6 +231,7 @@ export default function Profile() {
                 <Input
                   id="bank_account_number"
                   placeholder="Your account number"
+                  disabled={hasSavedBankDetails && bankDetailsLocked}
                   {...register('bank_account_number')}
                 />
                 {errors.bank_account_number && (
@@ -201,6 +244,7 @@ export default function Profile() {
                 <Input
                   id="ifsc_code"
                   placeholder="e.g., SBIN0001234"
+                  disabled={hasSavedBankDetails && bankDetailsLocked}
                   {...register('ifsc_code')}
                 />
                 {errors.ifsc_code && (
@@ -224,6 +268,7 @@ export default function Profile() {
               <Input
                 id="upi_id"
                 placeholder="yourname@upi"
+                disabled={hasSavedBankDetails && bankDetailsLocked}
                 {...register('upi_id')}
               />
               {errors.upi_id && (
@@ -236,7 +281,7 @@ export default function Profile() {
           <Button 
             type="submit" 
             className="w-full h-12" 
-            disabled={!isDirty || saving}
+            disabled={!isDirty || saving || (hasSavedBankDetails && bankDetailsLocked)}
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -248,6 +293,14 @@ export default function Profile() {
             )}
           </Button>
         </form>
+
+        {/* Password Confirmation Dialog */}
+        <PasswordConfirmDialog
+          open={showPasswordDialog}
+          onOpenChange={setShowPasswordDialog}
+          onConfirmed={onPasswordConfirmed}
+          email={profile?.email || ''}
+        />
       </div>
     </MobileLayout>
   );
