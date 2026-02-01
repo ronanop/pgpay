@@ -12,6 +12,58 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+// Compress image using Canvas API
+const compressImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+
+        // Create canvas and draw resized image
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob with compression
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
 const ticketSchema = z.object({
   amount: z.string()
     .nonempty('Amount is required')
@@ -82,14 +134,19 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
     setSubmitting(true);
 
     try {
-      // Upload proof image
-      const fileExt = proofFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
       setUploading(true);
+      
+      // Compress image before upload (max 1200px, 70% quality)
+      const compressedBlob = await compressImage(proofFile, 1200, 1200, 0.7);
+      const fileName = `${user.id}/${Date.now()}.jpg`; // Always save as jpg after compression
+      
+      console.log(`Original: ${(proofFile.size / 1024).toFixed(1)}KB → Compressed: ${(compressedBlob.size / 1024).toFixed(1)}KB`);
+
       const { error: uploadError } = await supabase.storage
         .from('payment-proofs')
-        .upload(fileName, proofFile);
+        .upload(fileName, compressedBlob, {
+          contentType: 'image/jpeg',
+        });
 
       if (uploadError) throw uploadError;
       setUploading(false);
