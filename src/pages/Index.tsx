@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, Loader2 } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { WalletCard } from '@/components/tickets/WalletCard';
 import { TicketCard } from '@/components/tickets/TicketCard';
 import { SubmitTicketSheet } from '@/components/tickets/SubmitTicketSheet';
+import { TicketDetailDialog } from '@/components/tickets/TicketDetailDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentTicket } from '@/types/database';
+import { toast } from 'sonner';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<PaymentTicket | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const previousTicketsRef = useRef<Map<string, PaymentTicket>>(new Map());
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -28,6 +33,63 @@ export default function Index() {
   useEffect(() => {
     if (user && !isAdmin) {
       fetchTickets();
+
+      // Subscribe to realtime updates for this user's tickets
+      const channel = supabase
+        .channel('user-tickets')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'payment_tickets',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updatedTicket = payload.new as PaymentTicket;
+            const oldTicket = previousTicketsRef.current.get(updatedTicket.id);
+
+            // Check if status changed to rejected
+            if (oldTicket && oldTicket.status !== 'rejected' && updatedTicket.status === 'rejected') {
+              // Show notification for rejected ticket
+              toast.error(
+                `Your ticket for $${updatedTicket.amount} USDT was rejected`,
+                {
+                  description: updatedTicket.admin_notes || 'Tap to view details',
+                  duration: 10000,
+                  action: {
+                    label: 'View',
+                    onClick: () => {
+                      setSelectedTicket(updatedTicket);
+                      setDetailOpen(true);
+                    },
+                  },
+                }
+              );
+            } else if (oldTicket && oldTicket.status !== 'approved' && updatedTicket.status === 'approved') {
+              // Show notification for approved ticket
+              toast.success(
+                `Your ticket for $${updatedTicket.amount} USDT was approved!`,
+                {
+                  duration: 5000,
+                }
+              );
+            }
+
+            // Update the ticket in state
+            setTickets((prev) =>
+              prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+            );
+
+            // Update the reference
+            previousTicketsRef.current.set(updatedTicket.id, updatedTicket);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user, isAdmin]);
 
@@ -39,7 +101,13 @@ export default function Index() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTickets((data as PaymentTicket[]) || []);
+      
+      const ticketsData = (data as PaymentTicket[]) || [];
+      setTickets(ticketsData);
+      
+      // Store current tickets for comparison
+      previousTicketsRef.current.clear();
+      ticketsData.forEach((t) => previousTicketsRef.current.set(t.id, t));
     } catch (error) {
       console.error('Error fetching tickets:', error);
     } finally {
@@ -51,6 +119,11 @@ export default function Index() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchTickets();
+  };
+
+  const handleTicketClick = (ticket: PaymentTicket) => {
+    setSelectedTicket(ticket);
+    setDetailOpen(true);
   };
 
   if (authLoading || !user) {
@@ -100,7 +173,11 @@ export default function Index() {
           ) : (
             <div className="space-y-3">
               {tickets.map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} />
+                <TicketCard 
+                  key={ticket.id} 
+                  ticket={ticket} 
+                  onClick={() => handleTicketClick(ticket)}
+                />
               ))}
             </div>
           )}
@@ -121,6 +198,13 @@ export default function Index() {
         open={submitOpen}
         onOpenChange={setSubmitOpen}
         onSuccess={fetchTickets}
+      />
+
+      {/* Ticket Detail Dialog */}
+      <TicketDetailDialog
+        ticket={selectedTicket}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
       />
     </MobileLayout>
   );
