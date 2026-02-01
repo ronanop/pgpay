@@ -62,6 +62,8 @@ export default function Admin() {
   const [selectedTicket, setSelectedTicket] = useState<TicketWithProfile | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
+  const [proofImageUrl, setProofImageUrl] = useState<string | null>(null);
+  const [loadingProofImage, setLoadingProofImage] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -127,6 +129,60 @@ export default function Admin() {
       fetchUsers();
     }
   }, [user, isAdmin, fetchTickets, fetchUsers]);
+
+  // Generate signed URL when a ticket is selected
+  useEffect(() => {
+    const getSignedUrl = async () => {
+      if (selectedTicket?.proof_url) {
+        setLoadingProofImage(true);
+        try {
+          // Check if it's already a full URL (legacy data) or just a path
+          const isFullUrl = selectedTicket.proof_url.startsWith('http');
+          
+          if (isFullUrl) {
+            // Legacy: proof_url is already a full URL, try to extract path
+            const urlParts = selectedTicket.proof_url.split('/payment-proofs/');
+            if (urlParts.length > 1) {
+              const path = urlParts[1];
+              const { data, error } = await supabase.storage
+                .from('payment-proofs')
+                .createSignedUrl(path, 3600); // 1 hour expiry
+              
+              if (!error && data?.signedUrl) {
+                setProofImageUrl(data.signedUrl);
+              } else {
+                // Fallback to original URL
+                setProofImageUrl(selectedTicket.proof_url);
+              }
+            } else {
+              setProofImageUrl(selectedTicket.proof_url);
+            }
+          } else {
+            // New format: proof_url is just the file path
+            const { data, error } = await supabase.storage
+              .from('payment-proofs')
+              .createSignedUrl(selectedTicket.proof_url, 3600);
+            
+            if (!error && data?.signedUrl) {
+              setProofImageUrl(data.signedUrl);
+            } else {
+              console.error('Error creating signed URL:', error);
+              setProofImageUrl(null);
+            }
+          }
+        } catch (error) {
+          console.error('Error getting signed URL:', error);
+          setProofImageUrl(null);
+        } finally {
+          setLoadingProofImage(false);
+        }
+      } else {
+        setProofImageUrl(null);
+      }
+    };
+
+    getSignedUrl();
+  }, [selectedTicket]);
 
   const handleTicketAction = async (action: TicketStatus) => {
     if (!selectedTicket || !user) return;
@@ -386,18 +442,32 @@ export default function Admin() {
               {selectedTicket.proof_url && (
                 <div>
                   <Label className="mb-2 block">Payment Proof</Label>
-                  <a 
-                    href={selectedTicket.proof_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <img 
-                      src={selectedTicket.proof_url} 
-                      alt="Payment proof" 
-                      className="w-full h-48 object-cover rounded-lg border"
-                    />
-                  </a>
+                  {loadingProofImage ? (
+                    <div className="w-full h-48 flex items-center justify-center rounded-lg border bg-muted">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : proofImageUrl ? (
+                    <a 
+                      href={proofImageUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img 
+                        src={proofImageUrl} 
+                        alt="Payment proof" 
+                        className="w-full h-48 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <Download className="h-3 w-3" />
+                        Click to view/download full size
+                      </p>
+                    </a>
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+                      <p className="text-sm">Failed to load image</p>
+                    </div>
+                  )}
                 </div>
               )}
 
