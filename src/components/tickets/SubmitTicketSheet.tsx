@@ -94,19 +94,15 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
       if (uploadError) throw uploadError;
       setUploading(false);
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('payment-proofs')
-        .getPublicUrl(fileName);
-
-      // Create ticket
+      // Store the file path (not public URL) since bucket is private
+      // Admin will generate signed URLs to view images
       const { error: ticketError } = await supabase
         .from('payment_tickets')
         .insert({
           user_id: user.id,
           amount: parseFloat(data.amount),
           notes: data.notes || null,
-          proof_url: urlData.publicUrl,
+          proof_url: fileName, // Store path, not URL
         });
 
       if (ticketError) throw ticketError;
