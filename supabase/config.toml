@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.resend-verification-email]
 verify_jwt = false
+
+[functions.cleanup-old-proofs]
+verify_jwt = false
