@@ -271,4 +271,13 @@
   .touch-feedback {
     @apply transition-all duration-150 active:scale-[0.98] active:opacity-80;
   }
+
+  /* Safe area padding for mobile devices */
+  .pb-safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

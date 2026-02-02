@@ -188,100 +188,105 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
-        <SheetHeader className="text-left">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl flex flex-col">
+        <SheetHeader className="text-left flex-shrink-0">
           <SheetTitle>Submit Payment Proof</SheetTitle>
           <SheetDescription>
             Upload your payment screenshot and enter the amount you paid.
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-6">
-          {/* Proof Upload */}
-          <div className="space-y-2">
-            <Label>Payment Screenshot *</Label>
-            {proofPreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-border">
-                <img
-                  src={proofPreview}
-                  alt="Payment proof"
-                  className="w-full h-48 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={removeProof}
-                  className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary hover:bg-muted/50">
-                <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  Tap to upload screenshot
-                </span>
-                <span className="text-xs text-muted-foreground mt-1">
-                  PNG, JPG up to 5MB
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </label>
-            )}
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col flex-1 overflow-hidden">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+            {/* Proof Upload */}
+            <div className="space-y-2">
+              <Label>Payment Screenshot *</Label>
+              {proofPreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img
+                    src={proofPreview}
+                    alt="Payment proof"
+                    className="w-full h-48 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeProof}
+                    className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary hover:bg-muted/50">
+                  <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Tap to upload screenshot
+                  </span>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG up to 5MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (USDT) *</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                {...register('amount')}
+                className="text-lg"
+              />
+              {errors.amount && (
+                <p className="text-sm text-destructive">{errors.amount.message}</p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Transaction ID or any reference..."
+                rows={3}
+                {...register('notes')}
+              />
+              {errors.notes && (
+                <p className="text-sm text-destructive">{errors.notes.message}</p>
+              )}
+            </div>
           </div>
 
-          {/* Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount (USDT) *</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              {...register('amount')}
-              className="text-lg"
-            />
-            {errors.amount && (
-              <p className="text-sm text-destructive">{errors.amount.message}</p>
-            )}
+          {/* Fixed Submit Button at bottom with safe area padding */}
+          <div className="flex-shrink-0 pt-4 pb-safe-area-bottom">
+            <Button
+              type="submit"
+              className="w-full h-12 text-base mb-4"
+              disabled={submitting || !proofFile}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploading ? 'Uploading...' : 'Submitting...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Submit Payment Proof
+                </>
+              )}
+            </Button>
           </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Transaction ID or any reference..."
-              rows={3}
-              {...register('notes')}
-            />
-            {errors.notes && (
-              <p className="text-sm text-destructive">{errors.notes.message}</p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full h-12 text-base"
-            disabled={submitting || !proofFile}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {uploading ? 'Uploading...' : 'Submitting...'}
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Submit Payment Proof
-              </>
-            )}
-          </Button>
         </form>
       </SheetContent>
     </Sheet>
