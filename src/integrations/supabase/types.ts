@@ -68,6 +68,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_rate_limits: {
+        Row: {
+          attempts: number
+          created_at: string
+          email: string
+          first_attempt_at: string
+          id: string
+          ip_address: string
+          last_attempt_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          email: string
+          first_attempt_at?: string
+          id?: string
+          ip_address: string
+          last_attempt_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          email?: string
+          first_attempt_at?: string
+          id?: string
+          ip_address?: string
+          last_attempt_at?: string
+        }
+        Relationships: []
+      }
       payment_tickets: {
         Row: {
           admin_notes: string | null

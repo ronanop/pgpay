@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Eye, EyeOff, Wallet, Mail, Phone } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Wallet, Mail, Phone, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import { signInWithPhone, signInWithEmail, signUp } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { CountryCodeSelect, countryCodes, CountryCode } from '@/components/ui/country-code-select';
+import { supabase } from '@/integrations/supabase/client';
 
 const phoneLoginSchema = z.object({
   phone: z.string()
@@ -61,7 +62,9 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [countryCode, setCountryCode] = useState<CountryCode>(countryCodes[0]); // Default to India
-
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
   const phoneLoginForm = useForm<PhoneLoginFormData>({
     resolver: zodResolver(phoneLoginSchema),
   });
@@ -103,7 +106,14 @@ export default function Auth() {
     try {
       const { error } = await signInWithEmail(data.email, data.password);
       if (error) {
-        toast.error(error.message || 'Failed to sign in');
+        // Check if error is about email not confirmed
+        if (error.message?.toLowerCase().includes('email not confirmed')) {
+          setResendEmail(data.email);
+          setShowResendVerification(true);
+          toast.error('Please verify your email before signing in');
+        } else {
+          toast.error(error.message || 'Failed to sign in');
+        }
         return;
       }
       toast.success('Welcome back!');
@@ -112,6 +122,41 @@ export default function Auth() {
       toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!resendEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-verification-email', {
+        body: { email: resendEmail }
+      });
+
+      if (error) {
+        toast.error(error.message || 'Failed to resend verification email');
+        return;
+      }
+
+      if (data?.error) {
+        if (data.rateLimited) {
+          toast.error(data.error);
+        } else {
+          toast.error(data.error);
+        }
+        return;
+      }
+
+      toast.success(`Verification email sent! ${data.attemptsRemaining > 0 ? `(${data.attemptsRemaining} attempts remaining)` : ''}`);
+      setShowResendVerification(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resend verification email');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -300,7 +345,59 @@ export default function Auth() {
                     'Sign In'
                   )}
                 </Button>
+
+                {/* Resend Verification Link */}
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResendEmail(emailLoginForm.getValues('email') || '');
+                      setShowResendVerification(true);
+                    }}
+                    className="text-sm text-muted-foreground hover:text-primary underline"
+                  >
+                    Didn't receive verification email?
+                  </button>
+                </div>
               </form>
+            )}
+
+            {/* Resend Verification Modal */}
+            {showResendVerification && (
+              <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <RefreshCw className="h-4 w-4" />
+                  Resend Verification Email
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter your email to receive a new verification link. You can request up to 3 emails per 24 hours.
+                </p>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleResendVerification} 
+                    disabled={resendLoading || !resendEmail}
+                    className="flex-1"
+                  >
+                    {resendLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Send Email'
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowResendVerification(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
             )}
           </TabsContent>
 
