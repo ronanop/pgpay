@@ -28,14 +28,6 @@ import { signOut } from '@/lib/auth';
 import { PaymentTicket, Profile, TicketStatus } from '@/types/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
 interface TicketWithProfile extends PaymentTicket {
@@ -61,11 +53,6 @@ export default function Admin() {
   const [tickets, setTickets] = useState<TicketWithProfile[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTicket, setSelectedTicket] = useState<TicketWithProfile | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [adminNotes, setAdminNotes] = useState('');
-  const [proofImageUrl, setProofImageUrl] = useState<string | null>(null);
-  const [loadingProofImage, setLoadingProofImage] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -132,105 +119,6 @@ export default function Admin() {
     }
   }, [user, isAdmin, fetchTickets, fetchUsers]);
 
-  // Generate signed URL when a ticket is selected
-  useEffect(() => {
-    const getSignedUrl = async () => {
-      if (selectedTicket?.proof_url) {
-        setLoadingProofImage(true);
-        try {
-          // Check if it's already a full URL (legacy data) or just a path
-          const isFullUrl = selectedTicket.proof_url.startsWith('http');
-          
-          if (isFullUrl) {
-            // Legacy: proof_url is already a full URL, try to extract path
-            const urlParts = selectedTicket.proof_url.split('/payment-proofs/');
-            if (urlParts.length > 1) {
-              const path = urlParts[1];
-              const { data, error } = await supabase.storage
-                .from('payment-proofs')
-                .createSignedUrl(path, 3600); // 1 hour expiry
-              
-              if (!error && data?.signedUrl) {
-                setProofImageUrl(data.signedUrl);
-              } else {
-                // Fallback to original URL
-                setProofImageUrl(selectedTicket.proof_url);
-              }
-            } else {
-              setProofImageUrl(selectedTicket.proof_url);
-            }
-          } else {
-            // New format: proof_url is just the file path
-            const { data, error } = await supabase.storage
-              .from('payment-proofs')
-              .createSignedUrl(selectedTicket.proof_url, 3600);
-            
-            if (!error && data?.signedUrl) {
-              setProofImageUrl(data.signedUrl);
-            } else {
-              console.error('Error creating signed URL:', error);
-              setProofImageUrl(null);
-            }
-          }
-        } catch (error) {
-          console.error('Error getting signed URL:', error);
-          setProofImageUrl(null);
-        } finally {
-          setLoadingProofImage(false);
-        }
-      } else {
-        setProofImageUrl(null);
-      }
-    };
-
-    getSignedUrl();
-  }, [selectedTicket]);
-
-  const handleTicketAction = async (action: TicketStatus) => {
-    if (!selectedTicket || !user) return;
-    
-    setActionLoading(true);
-    try {
-      // Update ticket
-      const { error: ticketError } = await supabase
-        .from('payment_tickets')
-        .update({
-          status: action,
-          admin_notes: adminNotes || null,
-          processed_by: user.id,
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', selectedTicket.id);
-
-      if (ticketError) throw ticketError;
-
-      // Create audit log
-      const { error: auditError } = await supabase
-        .from('audit_logs')
-        .insert({
-          admin_id: user.id,
-          action: `ticket_${action}`,
-          target_type: 'payment_ticket',
-          target_id: selectedTicket.id,
-          details: {
-            previous_status: selectedTicket.status,
-            new_status: action,
-            admin_notes: adminNotes,
-          },
-        });
-
-      if (auditError) console.error('Audit log error:', auditError);
-
-      toast.success(`Ticket ${action} successfully!`);
-      setSelectedTicket(null);
-      setAdminNotes('');
-      fetchTickets();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update ticket');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const exportUsersCSV = () => {
     const headers = ['Name', 'Email', 'Phone', 'Bank Name', 'Account Number', 'IFSC', 'UPI ID', 'Created At'];
@@ -338,7 +226,7 @@ export default function Admin() {
                 <TicketAdminCard 
                   key={ticket.id} 
                   ticket={ticket} 
-                  onClick={() => setSelectedTicket(ticket)}
+                  onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
                 />
               ))
             )}
@@ -358,7 +246,7 @@ export default function Admin() {
                 <TicketAdminCard 
                   key={ticket.id} 
                   ticket={ticket} 
-                  onClick={() => setSelectedTicket(ticket)}
+                  onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
                 />
               ))
             )}
@@ -401,162 +289,6 @@ export default function Admin() {
         </Tabs>
       </main>
 
-      {/* Ticket Detail Dialog */}
-      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-6 pb-0 shrink-0">
-            <DialogTitle>Ticket Details</DialogTitle>
-            <DialogDescription>
-              Review and process this payment ticket
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedTicket && (
-            <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
-                {/* Ticket Info */}
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Amount:</span>
-                    <span className="font-semibold">${selectedTicket.amount} USDT</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status:</span>
-                    <Badge className={statusConfig[selectedTicket.status].className}>
-                      {statusConfig[selectedTicket.status].label}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span>{format(new Date(selectedTicket.created_at), 'MMM d, yyyy h:mm a')}</span>
-                  </div>
-                </div>
-
-              {/* User Info */}
-              {selectedTicket.profiles && (
-                <div className="p-3 rounded-lg bg-muted/50 space-y-1">
-                  <p className="font-medium">{(selectedTicket.profiles as any).name || 'Unknown User'}</p>
-                  <p className="text-sm text-muted-foreground">{(selectedTicket.profiles as any).email}</p>
-                  <p className="text-sm text-muted-foreground">{(selectedTicket.profiles as any).phone}</p>
-                </div>
-              )}
-
-              {/* Bank Details */}
-              {selectedTicket.profiles && (
-                <BankDetailsSection profile={selectedTicket.profiles as any} />
-              )}
-
-              {/* Proof Image & User Notes - Side by Side */}
-              {(selectedTicket.proof_url || selectedTicket.notes) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Proof Image */}
-                  {selectedTicket.proof_url && (
-                    <div className="flex flex-col">
-                      <Label className="mb-2 block">Payment Proof</Label>
-                      {loadingProofImage ? (
-                        <div className="flex-1 min-h-[120px] flex items-center justify-center rounded-lg border bg-muted">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : proofImageUrl ? (
-                        <a 
-                          href={proofImageUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block flex-1"
-                        >
-                          <img 
-                            src={proofImageUrl} 
-                            alt="Payment proof" 
-                            className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <Download className="h-3 w-3" />
-                            View full size
-                          </p>
-                        </a>
-                      ) : (
-                        <div className="flex-1 min-h-[120px] flex items-center justify-center rounded-lg border bg-muted text-muted-foreground">
-                          <p className="text-sm">Failed to load</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* User Notes */}
-                  {selectedTicket.notes && (
-                    <div className="flex flex-col">
-                      <Label className="mb-2 block">User Notes</Label>
-                      <div className="flex-1 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg min-h-[120px]">
-                        {selectedTicket.notes}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-                {/* Admin Notes */}
-                <div>
-                  <Label htmlFor="admin-notes" className="mb-2 block">Admin Notes</Label>
-                  <Textarea
-                    id="admin-notes"
-                    placeholder="Add notes about this ticket..."
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              </div>
-              
-              {/* Fixed action buttons at bottom */}
-              {selectedTicket.status === 'pending' && (
-                <div className="shrink-0 p-6 pt-4 border-t border-border bg-background">
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1 bg-success hover:bg-success/90"
-                      onClick={() => handleTicketAction('approved')}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => handleTicketAction('rejected')}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {selectedTicket.status === 'approved' && (
-                <div className="shrink-0 p-6 pt-4 border-t border-border bg-background">
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => handleTicketAction('refunded')}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Process Refund'}
-                    </Button>
-                    <Button 
-                      variant="secondary"
-                      className="flex-1"
-                      onClick={() => handleTicketAction('closed')}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Closed'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
