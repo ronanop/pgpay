@@ -644,12 +644,43 @@ function AdminSettings() {
   );
 }
 
-const PERMISSIONS: { key: AdminPermission; label: string; description: string }[] = [
-  { key: 'manage_tickets', label: 'Manage Tickets', description: 'View and process payment tickets' },
-  { key: 'manage_users', label: 'Manage Users', description: 'View and delete user accounts' },
-  { key: 'manage_settings', label: 'Manage Settings', description: 'Change app settings' },
-  { key: 'manage_admins', label: 'Manage Admins', description: 'Add or remove other admins (Super Admin)' },
+interface PermissionGroup {
+  category: string;
+  permissions: { key: AdminPermission; label: string; description: string }[];
+}
+
+const PERMISSION_GROUPS: PermissionGroup[] = [
+  {
+    category: 'Tickets',
+    permissions: [
+      { key: 'view_tickets', label: 'View Tickets', description: 'View payment tickets' },
+      { key: 'process_tickets', label: 'Process Tickets', description: 'Approve/reject tickets' },
+      { key: 'delete_tickets', label: 'Delete Tickets', description: 'Delete payment tickets' },
+    ],
+  },
+  {
+    category: 'Users',
+    permissions: [
+      { key: 'view_users', label: 'View Users', description: 'View user accounts' },
+      { key: 'delete_users', label: 'Delete Users', description: 'Delete user accounts' },
+    ],
+  },
+  {
+    category: 'Settings',
+    permissions: [
+      { key: 'manage_settings', label: 'Manage Settings', description: 'Change app settings' },
+    ],
+  },
+  {
+    category: 'Admin',
+    permissions: [
+      { key: 'manage_admins', label: 'Manage Admins', description: 'Add/remove other admins (Super Admin)' },
+    ],
+  },
 ];
+
+// Flat list for badge display
+const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.permissions);
 
 interface AdminWithPermissions {
   user_id: string;
@@ -888,7 +919,7 @@ function AdminManagement() {
                 <div className="flex flex-wrap gap-1">
                   {admin.permissions.map(perm => (
                     <Badge key={perm} variant="outline" className="text-xs">
-                      {PERMISSIONS.find(p => p.key === perm)?.label}
+                      {ALL_PERMISSIONS.find(p => p.key === perm)?.label}
                     </Badge>
                   ))}
                 </div>
@@ -952,28 +983,33 @@ function AdminManagement() {
             </div>
 
             {/* Permission Selection */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-4 mb-6">
               <Label>Permissions</Label>
-              <div className="space-y-2">
-                {PERMISSIONS.map(perm => (
-                  <label key={perm.key} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <Checkbox
-                      checked={selectedPermissions.includes(perm.key)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedPermissions([...selectedPermissions, perm.key]);
-                        } else {
-                          setSelectedPermissions(selectedPermissions.filter(p => p !== perm.key));
-                        }
-                      }}
-                    />
-                    <div>
-                      <p className="text-sm font-medium">{perm.label}</p>
-                      <p className="text-xs text-muted-foreground">{perm.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              {PERMISSION_GROUPS.map(group => (
+                <div key={group.category} className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{group.category}</p>
+                  <div className="space-y-1">
+                    {group.permissions.map(perm => (
+                      <label key={perm.key} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                        <Checkbox
+                          checked={selectedPermissions.includes(perm.key)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedPermissions([...selectedPermissions, perm.key]);
+                            } else {
+                              setSelectedPermissions(selectedPermissions.filter(p => p !== perm.key));
+                            }
+                          }}
+                        />
+                        <div>
+                          <p className="text-sm font-medium">{perm.label}</p>
+                          <p className="text-xs text-muted-foreground">{perm.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="flex gap-2">

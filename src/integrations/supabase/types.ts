@@ -251,8 +251,11 @@ export type Database = {
     }
     Enums: {
       admin_permission:
-        | "manage_tickets"
-        | "manage_users"
+        | "view_tickets"
+        | "delete_tickets"
+        | "process_tickets"
+        | "view_users"
+        | "delete_users"
         | "manage_settings"
         | "manage_admins"
       app_role: "user" | "admin"
@@ -385,8 +388,11 @@ export const Constants = {
   public: {
     Enums: {
       admin_permission: [
-        "manage_tickets",
-        "manage_users",
+        "view_tickets",
+        "delete_tickets",
+        "process_tickets",
+        "view_users",
+        "delete_users",
         "manage_settings",
         "manage_admins",
       ],
