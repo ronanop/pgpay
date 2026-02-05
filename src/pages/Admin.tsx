@@ -21,8 +21,10 @@ import {
   Search,
   Shield,
   UserPlus,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
+import AdminDashboard from '@/components/admin/AdminDashboard';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -65,7 +67,7 @@ const statusConfig: Record<TicketStatus, {
 export default function Admin() {
   const navigate = useNavigate();
   const { user, loading: authLoading, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [tickets, setTickets] = useState<TicketWithProfile[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,7 +292,11 @@ export default function Admin() {
       {/* Content */}
       <main className="flex-1 p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsTrigger value="dashboard">
+              <BarChart3 className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
             <TabsTrigger value="pending" className="relative">
               <Ticket className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Pending</span>
@@ -313,6 +319,11 @@ export default function Admin() {
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard">
+            <AdminDashboard tickets={tickets} users={users} loading={loading} />
+          </TabsContent>
 
           {/* Tickets Tab */}
           <TabsContent value="pending" className="space-y-3">
