@@ -52,3 +52,13 @@ export interface UserRole {
   role: 'user' | 'admin';
   created_at: string;
 }
+
+export type AdminPermission = 'manage_tickets' | 'manage_users' | 'manage_settings' | 'manage_admins';
+
+export interface AdminPermissionRecord {
+  id: string;
+  user_id: string;
+  permission: AdminPermission;
+  granted_by: string | null;
+  created_at: string;
+}

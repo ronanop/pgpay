@@ -18,7 +18,10 @@ import {
   Copy,
   Check,
   Trash2,
-  Search
+  Search,
+  Shield,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,7 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { signOut } from '@/lib/auth';
-import { PaymentTicket, Profile, TicketStatus } from '@/types/database';
+import { PaymentTicket, Profile, TicketStatus, AdminPermission } from '@/types/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -41,6 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TicketWithProfile extends PaymentTicket {
   profiles?: Profile;
@@ -633,6 +637,360 @@ function AdminSettings() {
           </div>
         </div>
       </div>
+
+      {/* Admin Management Section */}
+      <AdminManagement />
+    </div>
+  );
+}
+
+const PERMISSIONS: { key: AdminPermission; label: string; description: string }[] = [
+  { key: 'manage_tickets', label: 'Manage Tickets', description: 'View and process payment tickets' },
+  { key: 'manage_users', label: 'Manage Users', description: 'View and delete user accounts' },
+  { key: 'manage_settings', label: 'Manage Settings', description: 'Change app settings' },
+  { key: 'manage_admins', label: 'Manage Admins', description: 'Add or remove other admins (Super Admin)' },
+];
+
+interface AdminWithPermissions {
+  user_id: string;
+  profile: Profile | null;
+  permissions: AdminPermission[];
+  isSuperAdmin: boolean;
+}
+
+function AdminManagement() {
+  const { user } = useAuth();
+  const [admins, setAdmins] = useState<AdminWithPermissions[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<AdminPermission[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [canManageAdmins, setCanManageAdmins] = useState(false);
+
+  useEffect(() => {
+    fetchAdmins();
+    fetchUsers();
+    checkPermission();
+  }, []);
+
+  const checkPermission = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.rpc('can_manage_admins', { _user_id: user.id });
+      if (!error) {
+        setCanManageAdmins(data || false);
+      }
+    } catch (error) {
+      console.error('Error checking permission:', error);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      // Get all admin users from user_roles
+      const { data: adminRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (rolesError) throw rolesError;
+
+      const adminUserIds = adminRoles?.map(r => r.user_id) || [];
+
+      if (adminUserIds.length === 0) {
+        setAdmins([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get profiles for admins
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('user_id', adminUserIds);
+
+      if (profilesError) throw profilesError;
+
+      // Get permissions for admins
+      const { data: permissions, error: permissionsError } = await supabase
+        .from('admin_permissions')
+        .select('*')
+        .in('user_id', adminUserIds);
+
+      if (permissionsError && permissionsError.code !== 'PGRST116') {
+        console.error('Permissions error:', permissionsError);
+      }
+
+      // Build admin list
+      const adminList: AdminWithPermissions[] = adminUserIds.map(userId => {
+        const profile = profiles?.find(p => p.user_id === userId) || null;
+        const userPerms = permissions?.filter(p => p.user_id === userId).map(p => p.permission as AdminPermission) || [];
+        // Super admin = has no permissions set (original admin) or has manage_admins
+        const isSuperAdmin = userPerms.length === 0 || userPerms.includes('manage_admins');
+        
+        return {
+          user_id: userId,
+          profile: profile as Profile | null,
+          permissions: userPerms,
+          isSuperAdmin,
+        };
+      });
+
+      setAdmins(adminList);
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers((data as Profile[]) || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!selectedUser || !user || selectedPermissions.length === 0) return;
+
+    setSaving(true);
+    try {
+      // First, add user to admin role if not already
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({ user_id: selectedUser.user_id, role: 'admin' }, { onConflict: 'user_id' });
+
+      if (roleError) throw roleError;
+
+      // Then add permissions
+      const permissionInserts = selectedPermissions.map(permission => ({
+        user_id: selectedUser.user_id,
+        permission,
+        granted_by: user.id,
+      }));
+
+      const { error: permError } = await supabase
+        .from('admin_permissions')
+        .insert(permissionInserts);
+
+      if (permError) throw permError;
+
+      toast.success('Admin added successfully!');
+      setShowAddDialog(false);
+      setSelectedUser(null);
+      setSelectedPermissions([]);
+      setUserSearch('');
+      fetchAdmins();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add admin');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (adminUserId: string) => {
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      // Remove all permissions
+      await supabase
+        .from('admin_permissions')
+        .delete()
+        .eq('user_id', adminUserId);
+
+      // Remove admin role
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', adminUserId)
+        .eq('role', 'admin');
+
+      toast.success('Admin removed successfully!');
+      fetchAdmins();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to remove admin');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    if (!userSearch.trim()) return false;
+    const search = userSearch.toLowerCase();
+    const isAlreadyAdmin = admins.some(a => a.user_id === u.user_id);
+    return !isAlreadyAdmin && (
+      u.name?.toLowerCase().includes(search) ||
+      u.email.toLowerCase().includes(search) ||
+      u.phone.toLowerCase().includes(search)
+    );
+  });
+
+  if (!canManageAdmins) {
+    return null;
+  }
+
+  return (
+    <div className="mobile-card space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">Admin Management</h3>
+        </div>
+        <Button size="sm" onClick={() => setShowAddDialog(true)}>
+          <UserPlus className="h-4 w-4 mr-1" />
+          Add Admin
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : admins.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">No admins configured</p>
+      ) : (
+        <div className="space-y-3">
+          {admins.map(admin => (
+            <div key={admin.user_id} className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{admin.profile?.name || 'Unknown'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{admin.profile?.email}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {admin.isSuperAdmin && (
+                    <Badge className="bg-primary/15 text-primary text-xs">Super Admin</Badge>
+                  )}
+                  {admin.user_id !== user?.id && (
+                    <button 
+                      onClick={() => handleRemoveAdmin(admin.user_id)}
+                      disabled={saving}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              {!admin.isSuperAdmin && admin.permissions.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {admin.permissions.map(perm => (
+                    <Badge key={perm} variant="outline" className="text-xs">
+                      {PERMISSIONS.find(p => p.key === perm)?.label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Admin Dialog */}
+      {showAddDialog && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Add Child Admin</h3>
+              <button onClick={() => setShowAddDialog(false)} className="p-1 hover:bg-muted rounded">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* User Search */}
+            <div className="space-y-3 mb-4">
+              <Label>Select User</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or phone..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full h-10 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
+                />
+              </div>
+              
+              {filteredUsers.length > 0 && (
+                <div className="border rounded-lg max-h-40 overflow-y-auto">
+                  {filteredUsers.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setUserSearch(u.name || u.email);
+                      }}
+                      className={cn(
+                        "w-full p-2 text-left hover:bg-muted transition-colors",
+                        selectedUser?.id === u.id && "bg-primary/10"
+                      )}
+                    >
+                      <p className="font-medium text-sm">{u.name || 'No name'}</p>
+                      <p className="text-xs text-muted-foreground">{u.email}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {selectedUser && (
+                <div className="p-2 rounded-lg bg-primary/10 text-sm">
+                  Selected: <strong>{selectedUser.name || selectedUser.email}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Permission Selection */}
+            <div className="space-y-3 mb-6">
+              <Label>Permissions</Label>
+              <div className="space-y-2">
+                {PERMISSIONS.map(perm => (
+                  <label key={perm.key} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <Checkbox
+                      checked={selectedPermissions.includes(perm.key)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPermissions([...selectedPermissions, perm.key]);
+                        } else {
+                          setSelectedPermissions(selectedPermissions.filter(p => p !== perm.key));
+                        }
+                      }}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{perm.label}</p>
+                      <p className="text-xs text-muted-foreground">{perm.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowAddDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={handleAddAdmin}
+                disabled={!selectedUser || selectedPermissions.length === 0 || saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Admin'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

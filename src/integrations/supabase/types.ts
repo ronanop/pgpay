@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["admin_permission"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["admin_permission"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["admin_permission"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
@@ -208,6 +232,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_admins: { Args: { _user_id: string }; Returns: boolean }
+      has_admin_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["admin_permission"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -218,6 +250,11 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      admin_permission:
+        | "manage_tickets"
+        | "manage_users"
+        | "manage_settings"
+        | "manage_admins"
       app_role: "user" | "admin"
       ticket_status: "pending" | "approved" | "rejected" | "refunded" | "closed"
     }
@@ -347,6 +384,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_permission: [
+        "manage_tickets",
+        "manage_users",
+        "manage_settings",
+        "manage_admins",
+      ],
       app_role: ["user", "admin"],
       ticket_status: ["pending", "approved", "rejected", "refunded", "closed"],
     },
