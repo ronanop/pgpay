@@ -16,7 +16,8 @@ import {
   Download,
   Eye,
   Copy,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,16 @@ import { PaymentTicket, Profile, TicketStatus } from '@/types/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TicketWithProfile extends PaymentTicket {
   profiles?: Profile;
@@ -53,6 +64,8 @@ export default function Admin() {
   const [tickets, setTickets] = useState<TicketWithProfile[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ticketToDelete, setTicketToDelete] = useState<TicketWithProfile | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -119,6 +132,42 @@ export default function Admin() {
     }
   }, [user, isAdmin, fetchTickets, fetchUsers]);
 
+  const handleDeleteTicket = async () => {
+    if (!ticketToDelete || !user) return;
+    
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from('payment_tickets')
+        .delete()
+        .eq('id', ticketToDelete.id);
+
+      if (error) throw error;
+
+      // Create audit log
+      await supabase
+        .from('audit_logs')
+        .insert({
+          admin_id: user.id,
+          action: 'ticket_deleted',
+          target_type: 'payment_ticket',
+          target_id: ticketToDelete.id,
+          details: {
+            amount: ticketToDelete.amount,
+            status: ticketToDelete.status,
+            user_id: ticketToDelete.user_id,
+          },
+        });
+
+      toast.success('Ticket deleted successfully');
+      setTicketToDelete(null);
+      fetchTickets();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete ticket');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const exportUsersCSV = () => {
     const headers = ['Name', 'Email', 'Phone', 'Bank Name', 'Account Number', 'IFSC', 'UPI ID', 'Created At'];
@@ -247,6 +296,8 @@ export default function Admin() {
                   key={ticket.id} 
                   ticket={ticket} 
                   onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
+                  onDelete={() => setTicketToDelete(ticket)}
+                  showDelete
                 />
               ))
             )}
@@ -289,22 +340,58 @@ export default function Admin() {
         </Tabs>
       </main>
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!ticketToDelete} onOpenChange={() => setTicketToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Ticket</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this ticket for ${ticketToDelete?.amount} USDT? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteTicket}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function TicketAdminCard({ ticket, onClick }: { ticket: TicketWithProfile; onClick: () => void }) {
+function TicketAdminCard({ 
+  ticket, 
+  onClick, 
+  onDelete, 
+  showDelete = false 
+}: { 
+  ticket: TicketWithProfile; 
+  onClick: () => void;
+  onDelete?: () => void;
+  showDelete?: boolean;
+}) {
   const status = statusConfig[ticket.status];
   const StatusIcon = status.icon;
   const profile = ticket.profiles as any;
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.();
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className="mobile-card w-full text-left transition-all hover:shadow-md active:scale-[0.99]"
-    >
+    <div className="mobile-card w-full transition-all hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
+        <button
+          onClick={onClick}
+          className="flex-1 min-w-0 text-left active:scale-[0.99]"
+        >
           <div className="flex items-center gap-2 mb-1">
             <span className="font-semibold">${ticket.amount}</span>
             <span className="text-muted-foreground text-sm">USDT</span>
@@ -315,17 +402,27 @@ function TicketAdminCard({ ticket, onClick }: { ticket: TicketWithProfile; onCli
           <p className="text-xs text-muted-foreground">
             {format(new Date(ticket.created_at), 'MMM d, yyyy • h:mm a')}
           </p>
-        </div>
+        </button>
         
         <div className="flex flex-col items-end gap-2">
           <Badge className={cn("text-xs", status.className)}>
             <StatusIcon className="h-3 w-3 mr-1" />
             {status.label}
           </Badge>
-          <Eye className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            {showDelete && (
+              <button 
+                onClick={handleDelete}
+                className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
