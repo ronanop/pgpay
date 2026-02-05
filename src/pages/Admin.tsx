@@ -403,8 +403,8 @@ export default function Admin() {
 
       {/* Ticket Detail Dialog */}
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle>Ticket Details</DialogTitle>
             <DialogDescription>
               Review and process this payment ticket
@@ -412,24 +412,26 @@ export default function Admin() {
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="space-y-4">
-              {/* Ticket Info */}
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount:</span>
-                  <span className="font-semibold">${selectedTicket.amount} USDT</span>
+            <div className="flex flex-col flex-1 overflow-hidden">
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
+                {/* Ticket Info */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-semibold">${selectedTicket.amount} USDT</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge className={statusConfig[selectedTicket.status].className}>
+                      {statusConfig[selectedTicket.status].label}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Date:</span>
+                    <span>{format(new Date(selectedTicket.created_at), 'MMM d, yyyy h:mm a')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={statusConfig[selectedTicket.status].className}>
-                    {statusConfig[selectedTicket.status].label}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date:</span>
-                  <span>{format(new Date(selectedTicket.created_at), 'MMM d, yyyy h:mm a')}</span>
-                </div>
-              </div>
 
               {/* User Info */}
               {selectedTicket.profiles && (
@@ -493,57 +495,62 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* Admin Notes */}
-              <div>
-                <Label htmlFor="admin-notes" className="mb-2 block">Admin Notes</Label>
-                <Textarea
-                  id="admin-notes"
-                  placeholder="Add notes about this ticket..."
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={2}
-                />
+                {/* Admin Notes */}
+                <div>
+                  <Label htmlFor="admin-notes" className="mb-2 block">Admin Notes</Label>
+                  <Textarea
+                    id="admin-notes"
+                    placeholder="Add notes about this ticket..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
               </div>
-
-              {/* Actions */}
+              
+              {/* Fixed action buttons at bottom */}
               {selectedTicket.status === 'pending' && (
-                <div className="flex gap-2">
-                  <Button 
-                    className="flex-1 bg-success hover:bg-success/90"
-                    onClick={() => handleTicketAction('approved')}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => handleTicketAction('rejected')}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
-                  </Button>
+                <div className="shrink-0 p-6 pt-4 border-t border-border bg-background">
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1 bg-success hover:bg-success/90"
+                      onClick={() => handleTicketAction('approved')}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => handleTicketAction('rejected')}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
+                    </Button>
+                  </div>
                 </div>
               )}
 
               {selectedTicket.status === 'approved' && (
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleTicketAction('refunded')}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Process Refund'}
-                  </Button>
-                  <Button 
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={() => handleTicketAction('closed')}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Closed'}
-                  </Button>
+                <div className="shrink-0 p-6 pt-4 border-t border-border bg-background">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleTicketAction('refunded')}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Process Refund'}
+                    </Button>
+                    <Button 
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => handleTicketAction('closed')}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Closed'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
