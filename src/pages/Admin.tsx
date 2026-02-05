@@ -17,7 +17,8 @@ import {
   Eye,
   Copy,
   Check,
-  Trash2
+  Trash2,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithProfile | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -168,6 +171,53 @@ export default function Admin() {
       setDeleteLoading(false);
     }
   };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !user) return;
+    
+    setDeleteLoading(true);
+    try {
+      // Delete user's profile (cascades to other related data)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userToDelete.user_id);
+
+      if (error) throw error;
+
+      // Create audit log
+      await supabase
+        .from('audit_logs')
+        .insert({
+          admin_id: user.id,
+          action: 'user_deleted',
+          target_type: 'profile',
+          target_id: userToDelete.id,
+          details: {
+            email: userToDelete.email,
+            name: userToDelete.name,
+          },
+        });
+
+      toast.success('User deleted successfully');
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete user');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    if (!userSearch.trim()) return true;
+    const search = userSearch.toLowerCase();
+    return (
+      u.name?.toLowerCase().includes(search) ||
+      u.email.toLowerCase().includes(search) ||
+      u.phone.toLowerCase().includes(search)
+    );
+  });
 
   const exportUsersCSV = () => {
     const headers = ['Name', 'Email', 'Phone', 'Bank Name', 'Account Number', 'IFSC', 'UPI ID', 'Created At'];
@@ -305,32 +355,56 @@ export default function Admin() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-3">
-            <div className="flex justify-end mb-4">
-              <Button variant="outline" size="sm" onClick={exportUsersCSV}>
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or phone..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full h-10 pl-9 pr-3 rounded-md border border-input bg-background text-sm"
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={exportUsersCSV} className="h-10">
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </Button>
             </div>
-            {users.map(user => (
-              <div key={user.id} className="mobile-card">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold">{user.name || 'No name'}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                    <p className="text-sm text-muted-foreground">{user.phone}</p>
-                  </div>
-                  <Badge variant="outline">
-                    {format(new Date(user.created_at), 'MMM d, yyyy')}
-                  </Badge>
-                </div>
-                {(user.bank_name || user.upi_id) && (
-                  <div className="mt-3 pt-3 border-t border-border text-sm text-muted-foreground">
-                    {user.bank_name && <p>Bank: {user.bank_name}</p>}
-                    {user.upi_id && <p>UPI: {user.upi_id}</p>}
-                  </div>
-                )}
+            {filteredUsers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {userSearch ? 'No users found matching your search' : 'No users found'}
               </div>
-            ))}
+            ) : (
+              filteredUsers.map(u => (
+                <div key={u.id} className="mobile-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold">{u.name || 'No name'}</p>
+                      <p className="text-sm text-muted-foreground truncate">{u.email}</p>
+                      <p className="text-sm text-muted-foreground">{u.phone}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline">
+                        {format(new Date(u.created_at), 'MMM d, yyyy')}
+                      </Badge>
+                      <button 
+                        onClick={() => setUserToDelete(u)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {(u.bank_name || u.upi_id) && (
+                    <div className="mt-3 pt-3 border-t border-border text-sm text-muted-foreground">
+                      {u.bank_name && <p>Bank: {u.bank_name}</p>}
+                      {u.upi_id && <p>UPI: {u.upi_id}</p>}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </TabsContent>
 
           {/* Settings Tab */}
@@ -353,6 +427,28 @@ export default function Admin() {
             <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteTicket}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{userToDelete?.name || userToDelete?.email}</strong>? This will remove their profile and all associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
               disabled={deleteLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
