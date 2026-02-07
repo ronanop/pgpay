@@ -15,6 +15,7 @@ import { Profile as ProfileType } from '@/types/database';
 import { toast } from 'sonner';
 import { PasswordConfirmDialog } from '@/components/profile/PasswordConfirmDialog';
 import { BankNameAutocomplete } from '@/components/profile/BankNameAutocomplete';
+import { SubmitTicketSheet } from '@/components/tickets/SubmitTicketSheet';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
@@ -34,6 +35,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [bankDetailsLocked, setBankDetailsLocked] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
 
   const { register, handleSubmit, reset, control, formState: { errors, isDirty } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -131,7 +133,10 @@ export default function Profile() {
   }
 
   return (
-    <MobileLayout>
+    <MobileLayout
+      showCenterAction={true}
+      onCenterAction={() => setSubmitOpen(true)}
+    >
       <div className="p-4 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -307,6 +312,16 @@ export default function Profile() {
           onOpenChange={setShowPasswordDialog}
           onConfirmed={onPasswordConfirmed}
           email={profile?.email || ''}
+        />
+
+        {/* Submit Ticket Sheet */}
+        <SubmitTicketSheet
+          open={submitOpen}
+          onOpenChange={setSubmitOpen}
+          onSuccess={() => {
+            setSubmitOpen(false);
+            navigate('/');
+          }}
         />
       </div>
     </MobileLayout>
