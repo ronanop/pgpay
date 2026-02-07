@@ -136,7 +136,10 @@ export default function Index() {
   }
 
   return (
-    <MobileLayout>
+    <MobileLayout 
+      showCenterAction={true} 
+      onCenterAction={() => setSubmitOpen(true)}
+    >
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -187,15 +190,6 @@ export default function Index() {
           )}
         </div>
       </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => setSubmitOpen(true)}
-        className="fab"
-        style={{ bottom: '5.5rem', left: '50%', transform: 'translateX(-50%)' }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
 
       {/* Submit Sheet */}
       <SubmitTicketSheet
