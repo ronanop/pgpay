@@ -1,14 +1,40 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SupportChatButton() {
+  const { user } = useAuth();
   const [whatsappNumber, setWhatsappNumber] = useState('919876543210');
   const [whatsappMessage, setWhatsappMessage] = useState('Hello! I need help with my PGPAY account.');
+  const [userProfile, setUserProfile] = useState<{ name: string; phone: string; email: string } | null>(null);
 
   useEffect(() => {
     fetchSupportSettings();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name, phone, email')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchSupportSettings = async () => {
     try {
@@ -32,8 +58,28 @@ export function SupportChatButton() {
     }
   };
 
+  const getFormattedMessage = () => {
+    let message = whatsappMessage;
+    
+    if (userProfile) {
+      message = message
+        .replace(/{name}/gi, userProfile.name || 'N/A')
+        .replace(/{phone}/gi, userProfile.phone || 'N/A')
+        .replace(/{email}/gi, userProfile.email || 'N/A');
+    } else {
+      // Replace placeholders with empty or default if no profile
+      message = message
+        .replace(/{name}/gi, '')
+        .replace(/{phone}/gi, '')
+        .replace(/{email}/gi, '');
+    }
+    
+    return message;
+  };
+
   const handleClick = () => {
-    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const formattedMessage = getFormattedMessage();
+    const encodedMessage = encodeURIComponent(formattedMessage);
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
   };
 
