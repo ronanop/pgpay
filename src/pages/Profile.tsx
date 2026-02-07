@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { PasswordConfirmDialog } from '@/components/profile/PasswordConfirmDialog';
 import { BankNameAutocomplete } from '@/components/profile/BankNameAutocomplete';
 import { SubmitTicketSheet } from '@/components/tickets/SubmitTicketSheet';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
@@ -125,11 +126,7 @@ export default function Profile() {
   };
 
   if (authLoading || !user || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Loading profile..." />;
   }
 
   return (
