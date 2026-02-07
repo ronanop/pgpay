@@ -59,7 +59,7 @@ export function MobileLayout({
             {showCenterAction && onCenterAction ? (
               <button
                 onClick={onCenterAction}
-                className="flex h-14 w-14 -mt-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+                className="flex h-14 w-14 -mt-3 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
               >
                 <Plus className="h-7 w-7" />
               </button>
