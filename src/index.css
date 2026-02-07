@@ -143,6 +143,16 @@
     overscroll-behavior: none;
   }
 
+  /* Hide all scrollbars globally */
+  html, body, * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Safe area insets for PWA */
   .safe-area-top {
     padding-top: env(safe-area-inset-top, 0px);
