@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, Loader2 } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { WalletCard } from '@/components/tickets/WalletCard';
+import { UsdtRatesCard } from '@/components/tickets/UsdtRatesCard';
 import { TicketCard } from '@/components/tickets/TicketCard';
 import { SubmitTicketSheet } from '@/components/tickets/SubmitTicketSheet';
 import { TicketDetailDialog } from '@/components/tickets/TicketDetailDialog';
@@ -151,6 +152,9 @@ export default function Index() {
 
         {/* Wallet Card */}
         <WalletCard />
+
+        {/* USDT Rates */}
+        <UsdtRatesCard />
 
         {/* Tickets List */}
         <div className="space-y-3">

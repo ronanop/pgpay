@@ -649,6 +649,81 @@ function AdminSettings() {
         </div>
       </div>
 
+      {/* USDT Rates Section */}
+      <div className="mobile-card space-y-4">
+        <h3 className="font-semibold">USDT Rates (₹)</h3>
+        <p className="text-sm text-muted-foreground">Set the exchange rate for each USDT type</p>
+        
+        <div className="space-y-2">
+          <Label htmlFor="usdt_rate_mixed">Mixed Rate</Label>
+          <div className="flex gap-2">
+            <input
+              id="usdt_rate_mixed"
+              type="number"
+              min="0"
+              step="0.01"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={settings.usdt_rate_mixed || ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, usdt_rate_mixed: e.target.value }))}
+              placeholder="e.g., 96"
+            />
+            <Button 
+              size="sm" 
+              onClick={() => updateSetting('usdt_rate_mixed', settings.usdt_rate_mixed || '')}
+              disabled={saving}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="usdt_rate_stock">Stock Rate</Label>
+          <div className="flex gap-2">
+            <input
+              id="usdt_rate_stock"
+              type="number"
+              min="0"
+              step="0.01"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={settings.usdt_rate_stock || ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, usdt_rate_stock: e.target.value }))}
+              placeholder="e.g., 94"
+            />
+            <Button 
+              size="sm" 
+              onClick={() => updateSetting('usdt_rate_stock', settings.usdt_rate_stock || '')}
+              disabled={saving}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="usdt_rate_game">Game Rate</Label>
+          <div className="flex gap-2">
+            <input
+              id="usdt_rate_game"
+              type="number"
+              min="0"
+              step="0.01"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={settings.usdt_rate_game || ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, usdt_rate_game: e.target.value }))}
+              placeholder="e.g., 92"
+            />
+            <Button 
+              size="sm" 
+              onClick={() => updateSetting('usdt_rate_game', settings.usdt_rate_game || '')}
+              disabled={saving}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Admin Management Section */}
       <AdminManagement />
     </div>
