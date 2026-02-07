@@ -724,6 +724,54 @@ function AdminSettings() {
         </div>
       </div>
 
+      {/* Customer Support Section */}
+      <div className="mobile-card space-y-4">
+        <h3 className="font-semibold">Customer Support</h3>
+        <p className="text-sm text-muted-foreground">Configure WhatsApp support settings</p>
+        
+        <div className="space-y-2">
+          <Label htmlFor="support_whatsapp_number">WhatsApp Number</Label>
+          <p className="text-xs text-muted-foreground">Enter number with country code (e.g., 919876543210)</p>
+          <div className="flex gap-2">
+            <input
+              id="support_whatsapp_number"
+              type="tel"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+              value={settings.support_whatsapp_number || ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, support_whatsapp_number: e.target.value }))}
+              placeholder="919876543210"
+            />
+            <Button 
+              size="sm" 
+              onClick={() => updateSetting('support_whatsapp_number', settings.support_whatsapp_number || '')}
+              disabled={saving}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="support_whatsapp_message">Pre-filled Message</Label>
+          <p className="text-xs text-muted-foreground">This message will appear when users open WhatsApp</p>
+          <textarea
+            id="support_whatsapp_message"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+            value={settings.support_whatsapp_message || ''}
+            onChange={(e) => setSettings(prev => ({ ...prev, support_whatsapp_message: e.target.value }))}
+            placeholder="Hello! I need help with my account."
+          />
+          <Button 
+            size="sm" 
+            onClick={() => updateSetting('support_whatsapp_message', settings.support_whatsapp_message || '')}
+            disabled={saving}
+          >
+            Save Message
+          </Button>
+        </div>
+      </div>
+
       {/* Admin Management Section */}
       <AdminManagement />
     </div>

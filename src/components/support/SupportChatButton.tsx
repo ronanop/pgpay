@@ -1,9 +1,40 @@
+import { useState, useEffect } from 'react';
 import { MessageCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export function SupportChatButton() {
+  const [whatsappNumber, setWhatsappNumber] = useState('919876543210');
+  const [whatsappMessage, setWhatsappMessage] = useState('Hello! I need help with my PGPAY account.');
+
+  useEffect(() => {
+    fetchSupportSettings();
+  }, []);
+
+  const fetchSupportSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['support_whatsapp_number', 'support_whatsapp_message']);
+
+      if (error) throw error;
+
+      data?.forEach((s) => {
+        if (s.key === 'support_whatsapp_number' && s.value) {
+          setWhatsappNumber(s.value);
+        }
+        if (s.key === 'support_whatsapp_message' && s.value) {
+          setWhatsappMessage(s.value);
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching support settings:', error);
+    }
+  };
+
   const handleClick = () => {
-    // Open WhatsApp support directly
-    window.open('https://wa.me/919876543210', '_blank');
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
   };
 
   return (
