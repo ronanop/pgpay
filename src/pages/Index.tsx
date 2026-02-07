@@ -192,7 +192,7 @@ export default function Index() {
       <button
         onClick={() => setSubmitOpen(true)}
         className="fab"
-        style={{ bottom: '5.5rem', right: '1.5rem' }}
+        style={{ bottom: '5.5rem', left: '50%', transform: 'translateX(-50%)' }}
       >
         <Plus className="h-6 w-6" />
       </button>
