@@ -14,6 +14,8 @@ export interface Profile {
   updated_at: string;
 }
 
+export type UsdtType = 'mixed' | 'stock' | 'game';
+
 export interface PaymentTicket {
   id: string;
   user_id: string;
@@ -24,6 +26,8 @@ export interface PaymentTicket {
   admin_notes: string | null;
   processed_by: string | null;
   processed_at: string | null;
+  usdt_type: UsdtType | null;
+  usdt_rate: number | null;
   created_at: string;
   updated_at: string;
 }

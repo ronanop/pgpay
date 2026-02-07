@@ -1,12 +1,18 @@
 import { format } from 'date-fns';
-import { Clock, CheckCircle, XCircle, RefreshCw, Archive } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, RefreshCw, Archive, Shuffle, BarChart3, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PaymentTicket, TicketStatus } from '@/types/database';
+import { PaymentTicket, TicketStatus, UsdtType } from '@/types/database';
 
 interface TicketCardProps {
   ticket: PaymentTicket;
   onClick?: () => void;
 }
+
+const usdtTypeConfig: Record<UsdtType, { icon: typeof Shuffle; label: string; colorClass: string }> = {
+  mixed: { icon: Shuffle, label: 'Mixed', colorClass: 'text-primary' },
+  stock: { icon: BarChart3, label: 'Stock', colorClass: 'text-blue-500' },
+  game: { icon: Gamepad2, label: 'Game', colorClass: 'text-amber-500' },
+};
 
 const statusConfig: Record<TicketStatus, { 
   icon: typeof Clock;
@@ -56,7 +62,25 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
               ${ticket.amount.toLocaleString()}
             </span>
             <span className="text-muted-foreground text-sm">USDT</span>
+            {ticket.usdt_type && (
+              (() => {
+                const typeConfig = usdtTypeConfig[ticket.usdt_type];
+                const TypeIcon = typeConfig.icon;
+                return (
+                  <span className={cn("flex items-center gap-0.5 text-xs", typeConfig.colorClass)}>
+                    <TypeIcon className="h-3 w-3" />
+                    {typeConfig.label}
+                  </span>
+                );
+              })()
+            )}
           </div>
+          
+          {ticket.usdt_rate && (
+            <p className="text-xs text-muted-foreground mb-1">
+              Rate: ₹{ticket.usdt_rate}
+            </p>
+          )}
           
           <p className="text-sm text-muted-foreground">
             {format(new Date(ticket.created_at), 'MMM d, yyyy • h:mm a')}

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Upload, Loader2, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, Loader2, X, Image as ImageIcon, Shuffle, BarChart3, Gamepad2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-
+import { UsdtType } from '@/types/database';
 // Compress image using Canvas API
 const compressImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -81,12 +81,58 @@ interface SubmitTicketSheetProps {
   onSuccess: () => void;
 }
 
+const USDT_TYPE_CONFIG = [
+  { type: 'mixed' as UsdtType, label: 'Mixed', icon: Shuffle, colorClass: 'border-primary bg-primary/10 text-primary', rateKey: 'usdt_rate_mixed' },
+  { type: 'stock' as UsdtType, label: 'Stock', icon: BarChart3, colorClass: 'border-blue-500 bg-blue-500/10 text-blue-500', rateKey: 'usdt_rate_stock' },
+  { type: 'game' as UsdtType, label: 'Game', icon: Gamepad2, colorClass: 'border-amber-500 bg-amber-500/10 text-amber-500', rateKey: 'usdt_rate_game' },
+];
+
 export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicketSheetProps) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<UsdtType>('mixed');
+  const [rates, setRates] = useState<Record<string, string>>({});
+  const [loadingRates, setLoadingRates] = useState(true);
+
+  // Fetch USDT rates
+  useEffect(() => {
+    if (open) {
+      fetchRates();
+    }
+  }, [open]);
+
+  const fetchRates = async () => {
+    try {
+      setLoadingRates(true);
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['usdt_rate_mixed', 'usdt_rate_stock', 'usdt_rate_game']);
+
+      if (error) throw error;
+
+      const ratesMap: Record<string, string> = {};
+      data?.forEach((s) => {
+        ratesMap[s.key] = s.value || '—';
+      });
+      setRates(ratesMap);
+    } catch (error) {
+      console.error('Error fetching rates:', error);
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  const getCurrentRate = (): number | null => {
+    const config = USDT_TYPE_CONFIG.find(c => c.type === selectedType);
+    if (!config) return null;
+    const rateStr = rates[config.rateKey];
+    const rate = parseFloat(rateStr);
+    return isNaN(rate) ? null : rate;
+  };
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<TicketFormData>({
     resolver: zodResolver(ticketSchema),
@@ -160,6 +206,8 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
           amount: parseFloat(data.amount),
           notes: data.notes || null,
           proof_url: fileName, // Store path, not URL
+          usdt_type: selectedType,
+          usdt_rate: getCurrentRate(),
         });
 
       if (ticketError) throw ticketError;
@@ -182,6 +230,7 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
     if (!submitting) {
       reset();
       removeProof();
+      setSelectedType('mixed');
       onOpenChange(false);
     }
   };
@@ -233,6 +282,38 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
                     className="hidden"
                   />
                 </label>
+              )}
+            </div>
+
+            {/* USDT Type Selection */}
+            <div className="space-y-2">
+              <Label>USDT Type *</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {USDT_TYPE_CONFIG.map((config) => {
+                  const Icon = config.icon;
+                  const rate = rates[config.rateKey] || '—';
+                  const isSelected = selectedType === config.type;
+                  
+                  return (
+                    <button
+                      key={config.type}
+                      type="button"
+                      onClick={() => setSelectedType(config.type)}
+                      className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                        isSelected 
+                          ? config.colorClass + ' border-current' 
+                          : 'border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/50'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 mb-1" />
+                      <span className="text-lg font-bold">₹{rate}</span>
+                      <span className="text-xs opacity-80">{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {loadingRates && (
+                <p className="text-xs text-muted-foreground">Loading rates...</p>
               )}
             </div>
 

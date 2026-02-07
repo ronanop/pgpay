@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
-import { Clock, CheckCircle, XCircle, RefreshCw, Archive, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, RefreshCw, Archive, AlertCircle, Shuffle, BarChart3, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PaymentTicket, TicketStatus } from '@/types/database';
+import { PaymentTicket, TicketStatus, UsdtType } from '@/types/database';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,12 @@ interface TicketDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const usdtTypeConfig: Record<UsdtType, { icon: typeof Shuffle; label: string; colorClass: string; bgClass: string }> = {
+  mixed: { icon: Shuffle, label: 'Mixed', colorClass: 'text-primary', bgClass: 'bg-primary/10' },
+  stock: { icon: BarChart3, label: 'Stock', colorClass: 'text-blue-500', bgClass: 'bg-blue-500/10' },
+  game: { icon: Gamepad2, label: 'Game', colorClass: 'text-amber-500', bgClass: 'bg-amber-500/10' },
+};
 
 const statusConfig: Record<TicketStatus, { 
   icon: typeof Clock;
@@ -88,6 +94,27 @@ export function TicketDetailDialog({ ticket, open, onOpenChange }: TicketDetailD
               {status.label}
             </Badge>
           </div>
+
+          {/* USDT Type & Rate */}
+          {ticket.usdt_type && (
+            <div className="flex items-center gap-3">
+              {(() => {
+                const typeConfig = usdtTypeConfig[ticket.usdt_type];
+                const TypeIcon = typeConfig.icon;
+                return (
+                  <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg", typeConfig.bgClass)}>
+                    <TypeIcon className={cn("h-4 w-4", typeConfig.colorClass)} />
+                    <span className={cn("font-medium", typeConfig.colorClass)}>{typeConfig.label}</span>
+                  </div>
+                );
+              })()}
+              {ticket.usdt_rate && (
+                <div className="text-sm text-muted-foreground">
+                  Rate: <span className="font-medium text-foreground">₹{ticket.usdt_rate}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Rejection Reason - Highlighted for rejected tickets */}
           {isRejected && ticket.admin_notes && (

@@ -134,6 +134,8 @@ export type Database = {
           proof_url: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           updated_at: string
+          usdt_rate: number | null
+          usdt_type: string | null
           user_id: string
         }
         Insert: {
@@ -147,6 +149,8 @@ export type Database = {
           proof_url?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           updated_at?: string
+          usdt_rate?: number | null
+          usdt_type?: string | null
           user_id: string
         }
         Update: {
@@ -160,6 +164,8 @@ export type Database = {
           proof_url?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           updated_at?: string
+          usdt_rate?: number | null
+          usdt_type?: string | null
           user_id?: string
         }
         Relationships: []
