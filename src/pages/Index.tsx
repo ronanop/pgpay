@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { WalletCard } from '@/components/tickets/WalletCard';
 import { UsdtRatesCard } from '@/components/tickets/UsdtRatesCard';
@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentTicket } from '@/types/database';
 import { toast } from 'sonner';
+import { LoadingScreen, LoadingSpinner } from '@/components/ui/loading-screen';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -128,11 +129,7 @@ export default function Index() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Loading..." />;
   }
 
   return (
@@ -164,9 +161,7 @@ export default function Index() {
           <h2 className="text-lg font-semibold">Your Tickets</h2>
           
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <LoadingSpinner />
           ) : tickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
