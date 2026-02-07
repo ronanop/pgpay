@@ -1,14 +1,21 @@
 import { ReactNode } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Activity, User } from 'lucide-react';
+import { Activity, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileLayoutProps {
   children: ReactNode;
   showNav?: boolean;
+  onCenterAction?: () => void;
+  showCenterAction?: boolean;
 }
 
-export function MobileLayout({ children, showNav = true }: MobileLayoutProps) {
+export function MobileLayout({ 
+  children, 
+  showNav = true, 
+  onCenterAction,
+  showCenterAction = false 
+}: MobileLayoutProps) {
   const location = useLocation();
   
   const navItems = [
@@ -28,7 +35,40 @@ export function MobileLayout({ children, showNav = true }: MobileLayoutProps) {
       {showNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg safe-area-bottom">
           <div className="flex h-16 items-center justify-around">
-            {navItems.map((item) => {
+            {/* First nav item */}
+            {navItems.slice(0, 1).map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "bottom-nav-item touch-feedback",
+                    isActive && "active"
+                  )}
+                >
+                  <Icon className="h-6 w-6" />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+
+            {/* Center action button */}
+            {showCenterAction && onCenterAction ? (
+              <button
+                onClick={onCenterAction}
+                className="flex h-14 w-14 -mt-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+              >
+                <Plus className="h-7 w-7" />
+              </button>
+            ) : (
+              <div className="w-14" /> 
+            )}
+
+            {/* Second nav item */}
+            {navItems.slice(1).map((item) => {
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
               
