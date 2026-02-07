@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, LogOut, Save, User, Building, CreditCard, Lock, Pencil } from 'lucide-react';
@@ -14,6 +14,7 @@ import { getProfile, updateProfile, signOut } from '@/lib/auth';
 import { Profile as ProfileType } from '@/types/database';
 import { toast } from 'sonner';
 import { PasswordConfirmDialog } from '@/components/profile/PasswordConfirmDialog';
+import { BankNameAutocomplete } from '@/components/profile/BankNameAutocomplete';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
@@ -34,7 +35,7 @@ export default function Profile() {
   const [bankDetailsLocked, setBankDetailsLocked] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<ProfileFormData>({
+  const { register, handleSubmit, reset, control, formState: { errors, isDirty } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
   });
 
@@ -200,7 +201,7 @@ export default function Profile() {
                 </Button>
               )}
               {hasSavedBankDetails && !bankDetailsLocked && (
-                <div className="flex items-center gap-1.5 text-sm text-green-600">
+                <div className="flex items-center gap-1.5 text-sm text-primary">
                   <Pencil className="h-3.5 w-3.5" />
                   Editing enabled
                 </div>
@@ -215,11 +216,17 @@ export default function Profile() {
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="bank_name">Bank Name</Label>
-                <Input
-                  id="bank_name"
-                  placeholder="e.g., State Bank of India"
-                  disabled={hasSavedBankDetails && bankDetailsLocked}
-                  {...register('bank_name')}
+                <Controller
+                  name="bank_name"
+                  control={control}
+                  render={({ field }) => (
+                    <BankNameAutocomplete
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      disabled={hasSavedBankDetails && bankDetailsLocked}
+                      placeholder="e.g., State Bank of India"
+                    />
+                  )}
                 />
                 {errors.bank_name && (
                   <p className="text-sm text-destructive">{errors.bank_name.message}</p>
