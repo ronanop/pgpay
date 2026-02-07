@@ -7,6 +7,7 @@ import { UsdtRatesCard } from '@/components/tickets/UsdtRatesCard';
 import { TicketCard } from '@/components/tickets/TicketCard';
 import { SubmitTicketSheet } from '@/components/tickets/SubmitTicketSheet';
 import { TicketDetailDialog } from '@/components/tickets/TicketDetailDialog';
+import { SupportChatButton } from '@/components/support/SupportChatButton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentTicket } from '@/types/database';
@@ -199,6 +200,9 @@ export default function Index() {
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />
+
+      {/* Support Chat */}
+      <SupportChatButton />
     </MobileLayout>
   );
 }
