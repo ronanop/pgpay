@@ -55,17 +55,17 @@ export function MobileLayout({
               );
             })}
 
-            {/* Center action button */}
-            {showCenterAction && onCenterAction ? (
-              <button
-                onClick={onCenterAction}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
-              >
-                <Plus className="h-6 w-6" />
-              </button>
-            ) : (
-              <div className="w-14" /> 
-            )}
+            {/* Center action button - always render space for consistent layout */}
+            <div className="flex items-center justify-center w-14">
+              {showCenterAction && onCenterAction && (
+                <button
+                  onClick={onCenterAction}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+                >
+                  <Plus className="h-6 w-6" />
+                </button>
+              )}
+            </div>
 
             {/* Second nav item */}
             {navItems.slice(1).map((item) => {
