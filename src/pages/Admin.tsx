@@ -754,13 +754,21 @@ function AdminSettings() {
         <div className="space-y-2">
           <Label htmlFor="support_whatsapp_message">Pre-filled Message</Label>
           <p className="text-xs text-muted-foreground">This message will appear when users open WhatsApp</p>
+          <div className="rounded-md bg-muted/50 p-2 mb-2">
+            <p className="text-xs text-muted-foreground mb-1">Available placeholders:</p>
+            <div className="flex flex-wrap gap-1">
+              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{name}'}</code>
+              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{phone}'}</code>
+              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{email}'}</code>
+            </div>
+          </div>
           <textarea
             id="support_whatsapp_message"
             rows={3}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
             value={settings.support_whatsapp_message || ''}
             onChange={(e) => setSettings(prev => ({ ...prev, support_whatsapp_message: e.target.value }))}
-            placeholder="Hello! I need help with my account."
+            placeholder="Hello! I'm {name} ({phone}). I need help with my PGPAY account."
           />
           <Button 
             size="sm" 
