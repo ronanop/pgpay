@@ -267,12 +267,12 @@ export function SubmitTicketSheet({ open, onOpenChange, onSuccess }: SubmitTicke
                   </button>
                 </div>
               ) : (
-                <label className="flex h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary hover:bg-muted/50">
-                  <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                <label className="flex h-28 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary hover:bg-muted/50">
+                  <ImageIcon className="h-6 w-6 text-muted-foreground mb-1" />
                   <span className="text-sm font-medium text-muted-foreground">
                     Tap to upload screenshot
                   </span>
-                  <span className="text-xs text-muted-foreground mt-1">
+                  <span className="text-xs text-muted-foreground">
                     PNG, JPG up to 5MB
                   </span>
                   <input
