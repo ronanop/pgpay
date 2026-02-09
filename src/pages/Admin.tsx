@@ -727,56 +727,28 @@ function AdminSettings() {
       {/* Customer Support Section */}
       <div className="mobile-card space-y-4">
         <h3 className="font-semibold">Customer Support</h3>
-        <p className="text-sm text-muted-foreground">Configure WhatsApp support settings</p>
+        <p className="text-sm text-muted-foreground">Configure the support chat link</p>
         
         <div className="space-y-2">
-          <Label htmlFor="support_whatsapp_number">WhatsApp Number</Label>
-          <p className="text-xs text-muted-foreground">Enter number with country code (e.g., 919876543210)</p>
+          <Label htmlFor="support_chat_url">Support Chat URL</Label>
+          <p className="text-xs text-muted-foreground">Enter the full URL that opens when users tap the chat support icon</p>
           <div className="flex gap-2">
             <input
-              id="support_whatsapp_number"
-              type="tel"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-              value={settings.support_whatsapp_number || ''}
-              onChange={(e) => setSettings(prev => ({ ...prev, support_whatsapp_number: e.target.value }))}
-              placeholder="919876543210"
+              id="support_chat_url"
+              type="url"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={settings.support_chat_url || ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, support_chat_url: e.target.value }))}
+              placeholder="https://example.com/chat"
             />
             <Button 
               size="sm" 
-              onClick={() => updateSetting('support_whatsapp_number', settings.support_whatsapp_number || '')}
+              onClick={() => updateSetting('support_chat_url', settings.support_chat_url || '')}
               disabled={saving}
             >
               Save
             </Button>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="support_whatsapp_message">Pre-filled Message</Label>
-          <p className="text-xs text-muted-foreground">This message will appear when users open WhatsApp</p>
-          <div className="rounded-md bg-muted/50 p-2 mb-2">
-            <p className="text-xs text-muted-foreground mb-1">Available placeholders:</p>
-            <div className="flex flex-wrap gap-1">
-              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{name}'}</code>
-              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{phone}'}</code>
-              <code className="text-xs bg-background px-1.5 py-0.5 rounded border">{'{email}'}</code>
-            </div>
-          </div>
-          <textarea
-            id="support_whatsapp_message"
-            rows={3}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
-            value={settings.support_whatsapp_message || ''}
-            onChange={(e) => setSettings(prev => ({ ...prev, support_whatsapp_message: e.target.value }))}
-            placeholder="Hello! I'm {name} ({phone}). I need help with my PGPAY account."
-          />
-          <Button 
-            size="sm" 
-            onClick={() => updateSetting('support_whatsapp_message', settings.support_whatsapp_message || '')}
-            disabled={saving}
-          >
-            Save Message
-          </Button>
         </div>
       </div>
 
