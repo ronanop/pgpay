@@ -26,9 +26,16 @@ export function SupportChatButton() {
 
   const handleClick = () => {
     if (!chatUrl) return;
-    // Use an anchor element click to ensure Android WebView can intercept and open externally
+    
+    // Convert whatsapp:// deep links to https:// URLs for WebView compatibility
+    let url = chatUrl;
+    if (url.startsWith('whatsapp://send')) {
+      url = url.replace('whatsapp://send', 'https://api.whatsapp.com/send');
+    }
+    
+    // Use anchor element so Android WebView can intercept external links
     const a = document.createElement('a');
-    a.href = chatUrl;
+    a.href = url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
