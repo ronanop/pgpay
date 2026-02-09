@@ -25,9 +25,15 @@ export function SupportChatButton() {
   };
 
   const handleClick = () => {
-    if (chatUrl) {
-      window.open(chatUrl, '_blank');
-    }
+    if (!chatUrl) return;
+    // Use an anchor element click to ensure Android WebView can intercept and open externally
+    const a = document.createElement('a');
+    a.href = chatUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   if (!chatUrl) return null;
