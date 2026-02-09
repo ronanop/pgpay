@@ -571,8 +571,7 @@ function AdminSettings() {
     try {
       const { error } = await supabase
         .from('app_settings')
-        .update({ value, updated_by: user.id })
-        .eq('key', key);
+        .upsert({ key, value, updated_by: user.id }, { onConflict: 'key' });
 
       if (error) throw error;
       
