@@ -26,21 +26,31 @@ export function SupportChatButton() {
 
   const handleClick = () => {
     if (!chatUrl) return;
-    
-    // Convert whatsapp:// deep links to https:// URLs for WebView compatibility
-    let url = chatUrl;
-    if (url.startsWith('whatsapp://send')) {
-      url = url.replace('whatsapp://send', 'https://api.whatsapp.com/send');
+
+    // Extract phone and text from various WhatsApp URL formats
+    let phone = '';
+    let text = '';
+    try {
+      const parsed = new URL(chatUrl.replace('whatsapp://send', 'https://wa.me'));
+      phone = parsed.searchParams.get('phone') || parsed.pathname.replace('/', '');
+      text = parsed.searchParams.get('text') || '';
+    } catch {
+      // fallback: just open the URL
+      window.open(chatUrl, '_system');
+      return;
     }
-    
-    // Use anchor element so Android WebView can intercept external links
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    const waWebUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+
+    // For Android WebView: use intent:// scheme to force external browser/app
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.includes('android') && userAgent.includes('wv')) {
+      // Android WebView detected - use intent scheme
+      const intentUrl = `intent://send?phone=${phone}&text=${encodeURIComponent(text)}#Intent;scheme=https;package=com.whatsapp;S.browser_fallback_url=${encodeURIComponent(waWebUrl)};end`;
+      window.location.href = intentUrl;
+    } else {
+      window.open(waWebUrl, '_blank');
+    }
   };
 
   if (!chatUrl) return null;
