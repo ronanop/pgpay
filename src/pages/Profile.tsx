@@ -20,10 +20,10 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
+  bank_account_holder_name: z.string().max(50, 'Holder name too long').optional(),
   bank_account_number: z.string().max(30, 'Account number too long').optional(),
   ifsc_code: z.string().max(20, 'IFSC code too long').optional(),
   bank_name: z.string().max(50, 'Bank name too long').optional(),
-  
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -64,15 +64,15 @@ export default function Profile() {
       setProfile(data);
       
       // Check if bank details already exist - if so, lock them
-      const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name);
+      const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name || data?.bank_account_holder_name);
       setBankDetailsLocked(hasBankDetails);
       
       reset({
         name: data?.name || '',
+        bank_account_holder_name: data?.bank_account_holder_name || '',
         bank_account_number: data?.bank_account_number || '',
         ifsc_code: data?.ifsc_code || '',
         bank_name: data?.bank_name || '',
-        
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -81,7 +81,7 @@ export default function Profile() {
     }
   };
 
-  const hasSavedBankDetails = !!(profile?.bank_account_number || profile?.ifsc_code || profile?.bank_name);
+  const hasSavedBankDetails = !!(profile?.bank_account_number || profile?.ifsc_code || profile?.bank_name || profile?.bank_account_holder_name);
 
   const handleUnlockBankDetails = () => {
     setShowPasswordDialog(true);
@@ -99,10 +99,10 @@ export default function Profile() {
     try {
       const { error } = await updateProfile(user.id, {
         name: data.name || undefined,
+        bank_account_holder_name: data.bank_account_holder_name || undefined,
         bank_account_number: data.bank_account_number || undefined,
         ifsc_code: data.ifsc_code || undefined,
         bank_name: data.bank_name || undefined,
-        
       });
 
       if (error) throw error;
@@ -232,6 +232,19 @@ export default function Profile() {
                 />
                 {errors.bank_name && (
                   <p className="text-sm text-destructive">{errors.bank_name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_holder_name">Account Holder Name</Label>
+                <Input
+                  id="bank_account_holder_name"
+                  placeholder="Name as per bank account"
+                  disabled={hasSavedBankDetails && bankDetailsLocked}
+                  {...register('bank_account_holder_name')}
+                />
+                {errors.bank_account_holder_name && (
+                  <p className="text-sm text-destructive">{errors.bank_account_holder_name.message}</p>
                 )}
               </div>
 

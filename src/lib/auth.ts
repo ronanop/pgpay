@@ -83,10 +83,10 @@ export async function getProfile(userId: string) {
 
 export async function updateProfile(userId: string, updates: {
   name?: string;
+  bank_account_holder_name?: string;
   bank_account_number?: string;
   ifsc_code?: string;
   bank_name?: string;
-  upi_id?: string;
 }) {
   const { data, error } = await supabase
     .from('profiles')

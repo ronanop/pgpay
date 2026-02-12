@@ -6,6 +6,7 @@ export interface Profile {
   name: string | null;
   email: string;
   phone: string;
+  bank_account_holder_name: string | null;
   bank_account_number: string | null;
   ifsc_code: string | null;
   bank_name: string | null;

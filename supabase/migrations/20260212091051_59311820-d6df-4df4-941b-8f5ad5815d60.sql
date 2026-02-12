@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN bank_account_holder_name text;
