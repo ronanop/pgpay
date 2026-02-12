@@ -139,7 +139,14 @@ export default function Profile() {
   return (
     <MobileLayout
       showCenterAction={true}
-      onCenterAction={() => setSubmitOpen(true)}
+      onCenterAction={() => {
+        const hasBankDetails = !!(profile?.bank_account_number && profile?.ifsc_code && profile?.bank_name && profile?.bank_account_holder_name);
+        if (!hasBankDetails) {
+          toast.error('Please fill in your bank details first');
+          return;
+        }
+        setSubmitOpen(true);
+      }}
     >
       <div className="p-4 space-y-6">
         {/* Header */}

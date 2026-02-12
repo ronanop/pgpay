@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PaymentTicket } from '@/types/database';
 import { toast } from 'sonner';
 import { LoadingScreen, LoadingSpinner } from '@/components/ui/loading-screen';
+import { getProfile } from '@/lib/auth';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -136,7 +137,18 @@ export default function Index() {
   return (
     <MobileLayout 
       showCenterAction={true} 
-      onCenterAction={() => setSubmitOpen(true)}
+      onCenterAction={async () => {
+        if (!user) return;
+        const { data } = await getProfile(user.id);
+        if (!data?.bank_account_number || !data?.ifsc_code || !data?.bank_name || !data?.bank_account_holder_name) {
+          toast.error('Please fill in your bank details first', {
+            description: 'Go to Profile to add your bank details',
+            action: { label: 'Go to Profile', onClick: () => navigate('/profile') },
+          });
+          return;
+        }
+        setSubmitOpen(true);
+      }}
     >
       <div className="p-4 space-y-4">
         {/* Header */}
