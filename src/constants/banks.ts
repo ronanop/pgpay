@@ -35,6 +35,7 @@ export const INDIAN_BANKS = [
   "South Indian Bank Ltd.",
   "Tamilnad Mercantile Bank Ltd.",
   "YES Bank Ltd.",
+  "Slice Bank",
   "AU Small Finance Bank Ltd.",
   "Capital Small Finance Bank Ltd.",
   "Equitas Small Finance Bank Ltd.",
