@@ -172,6 +172,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bank_account_holder_name: string | null
           bank_account_number: string | null
           bank_name: string | null
           created_at: string
@@ -185,6 +186,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bank_account_holder_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
           created_at?: string
@@ -198,6 +200,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bank_account_holder_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
           created_at?: string
