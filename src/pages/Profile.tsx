@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,6 +37,7 @@ export default function Profile() {
   const [bankDetailsLocked, setBankDetailsLocked] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const justUnlockedRef = useRef(false);
 
   const { register, handleSubmit, reset, control, formState: { errors, isDirty } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -63,9 +64,14 @@ export default function Profile() {
       
       setProfile(data);
       
-      // Check if bank details already exist - if so, lock them
+      // Check if bank details already exist - if so, lock them (unless just unlocked)
       const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name || data?.bank_account_holder_name);
-      setBankDetailsLocked(hasBankDetails);
+      if (justUnlockedRef.current) {
+        setBankDetailsLocked(false);
+        justUnlockedRef.current = false;
+      } else {
+        setBankDetailsLocked(hasBankDetails);
+      }
       
       reset({
         name: data?.name || '',
@@ -88,6 +94,7 @@ export default function Profile() {
   };
 
   const onPasswordConfirmed = () => {
+    justUnlockedRef.current = true;
     setBankDetailsLocked(false);
     toast.success('Bank details unlocked for editing');
   };
