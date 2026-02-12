@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, LogOut, Save, User, Building, CreditCard, Lock, Pencil } from 'lucide-react';
+import { Loader2, LogOut, Save, User, Building, Lock, Pencil } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ const profileSchema = z.object({
   bank_account_number: z.string().max(30, 'Account number too long').optional(),
   ifsc_code: z.string().max(20, 'IFSC code too long').optional(),
   bank_name: z.string().max(50, 'Bank name too long').optional(),
-  upi_id: z.string().max(50, 'UPI ID too long').optional(),
+  
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -64,7 +64,7 @@ export default function Profile() {
       setProfile(data);
       
       // Check if bank details already exist - if so, lock them
-      const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name || data?.upi_id);
+      const hasBankDetails = !!(data?.bank_account_number || data?.ifsc_code || data?.bank_name);
       setBankDetailsLocked(hasBankDetails);
       
       reset({
@@ -72,7 +72,7 @@ export default function Profile() {
         bank_account_number: data?.bank_account_number || '',
         ifsc_code: data?.ifsc_code || '',
         bank_name: data?.bank_name || '',
-        upi_id: data?.upi_id || '',
+        
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -81,7 +81,7 @@ export default function Profile() {
     }
   };
 
-  const hasSavedBankDetails = !!(profile?.bank_account_number || profile?.ifsc_code || profile?.bank_name || profile?.upi_id);
+  const hasSavedBankDetails = !!(profile?.bank_account_number || profile?.ifsc_code || profile?.bank_name);
 
   const handleUnlockBankDetails = () => {
     setShowPasswordDialog(true);
@@ -102,7 +102,7 @@ export default function Profile() {
         bank_account_number: data.bank_account_number || undefined,
         ifsc_code: data.ifsc_code || undefined,
         bank_name: data.bank_name || undefined,
-        upi_id: data.upi_id || undefined,
+        
       });
 
       if (error) throw error;
@@ -260,29 +260,6 @@ export default function Profile() {
                   <p className="text-sm text-destructive">{errors.ifsc_code.message}</p>
                 )}
               </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* UPI Details */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-              <h2 className="font-semibold">UPI Details</h2>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="upi_id">UPI ID</Label>
-              <Input
-                id="upi_id"
-                placeholder="yourname@upi"
-                disabled={hasSavedBankDetails && bankDetailsLocked}
-                {...register('upi_id')}
-              />
-              {errors.upi_id && (
-                <p className="text-sm text-destructive">{errors.upi_id.message}</p>
-              )}
             </div>
           </div>
 
