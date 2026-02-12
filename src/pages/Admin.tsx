@@ -571,7 +571,26 @@ function TicketAdminCard({
       {/* Bank Details */}
       {hasBankDetails && (
         <div className="mt-3 pt-3 border-t border-border space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Bank Details</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">Bank Details</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const parts: string[] = [];
+                if (profile.bank_account_holder_name) parts.push(`Holder: ${profile.bank_account_holder_name}`);
+                if (profile.bank_name) parts.push(`Bank: ${profile.bank_name}`);
+                if (profile.bank_account_number) parts.push(`A/C: ${profile.bank_account_number}`);
+                if (profile.ifsc_code) parts.push(`IFSC: ${profile.ifsc_code}`);
+                navigator.clipboard.writeText(parts.join('\n')).then(() => {
+                  setCopiedField(`all-${ticket.id}`);
+                  setTimeout(() => setCopiedField(null), 2000);
+                }).catch(() => toast.error('Failed to copy'));
+              }}
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              {copiedField === `all-${ticket.id}` ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy All</>}
+            </button>
+          </div>
           {profile.bank_account_holder_name && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Holder: <span className="text-foreground font-medium">{profile.bank_account_holder_name}</span></p>
