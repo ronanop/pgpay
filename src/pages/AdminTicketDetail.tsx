@@ -240,19 +240,21 @@ export default function AdminTicketDetail() {
             </div>
           </div>
 
-          {/* User Info */}
+          {/* User Info + Bank Details */}
           {profile && (
-            <div className="mobile-card space-y-2">
+            <div className="mobile-card space-y-3">
               <Label className="text-xs text-muted-foreground">User</Label>
               <p className="font-medium">{profile.name || 'Unknown User'}</p>
               <p className="text-sm text-muted-foreground">{profile.email}</p>
               <p className="text-sm text-muted-foreground">{profile.phone}</p>
-            </div>
-          )}
 
-          {/* Bank Details */}
-          {profile && (profile.bank_name || profile.upi_id) && (
-            <BankDetailsSection profile={profile} />
+              {(profile.bank_name || profile.bank_account_number || profile.ifsc_code || profile.bank_account_holder_name) && (
+                <>
+                  <div className="border-t border-border pt-3" />
+                  <BankDetailsSection profile={profile} />
+                </>
+              )}
+            </div>
           )}
 
           {/* Proof Image */}
@@ -386,9 +388,19 @@ function BankDetailsSection({ profile }: { profile: Profile }) {
   );
 
   return (
-    <div className="mobile-card space-y-3">
+    <div className="space-y-3">
       <Label className="text-xs text-muted-foreground">Bank Details</Label>
       
+      {profile.bank_account_holder_name && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Account Holder</p>
+            <p className="text-sm font-medium">{profile.bank_account_holder_name}</p>
+          </div>
+          <CopyButton value={profile.bank_account_holder_name} field="holder" />
+        </div>
+      )}
+
       {profile.bank_name && (
         <div className="flex items-center justify-between">
           <div>
@@ -416,16 +428,6 @@ function BankDetailsSection({ profile }: { profile: Profile }) {
             <p className="text-sm font-mono">{profile.ifsc_code}</p>
           </div>
           <CopyButton value={profile.ifsc_code} field="ifsc" />
-        </div>
-      )}
-      
-      {profile.upi_id && (
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">UPI ID</p>
-            <p className="text-sm font-mono">{profile.upi_id}</p>
-          </div>
-          <CopyButton value={profile.upi_id} field="upi" />
         </div>
       )}
     </div>
