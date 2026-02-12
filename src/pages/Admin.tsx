@@ -75,6 +75,7 @@ export default function Admin() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -392,7 +393,11 @@ export default function Admin() {
               </div>
             ) : (
               filteredUsers.map(u => (
-                <div key={u.id} className="mobile-card">
+                <div 
+                  key={u.id} 
+                  className="mobile-card cursor-pointer transition-all hover:shadow-md"
+                  onClick={() => setSelectedUser(u)}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold">{u.name || 'No name'}</p>
@@ -404,19 +409,13 @@ export default function Admin() {
                         {format(new Date(u.created_at), 'MMM d, yyyy')}
                       </Badge>
                       <button 
-                        onClick={() => setUserToDelete(u)}
+                        onClick={(e) => { e.stopPropagation(); setUserToDelete(u); }}
                         className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                  {(u.bank_name || u.upi_id) && (
-                    <div className="mt-3 pt-3 border-t border-border text-sm text-muted-foreground">
-                      {u.bank_name && <p>Bank: {u.bank_name}</p>}
-                      {u.upi_id && <p>UPI: {u.upi_id}</p>}
-                    </div>
-                  )}
                 </div>
               ))
             )}
@@ -472,6 +471,13 @@ export default function Admin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Detail Dialog */}
+      <UserDetailDialog 
+        user={selectedUser} 
+        open={!!selectedUser} 
+        onOpenChange={(open) => !open && setSelectedUser(null)} 
+      />
     </div>
   );
 }
@@ -1204,5 +1210,86 @@ function BankDetailsSection({ profile }: { profile: Profile }) {
       <CopyableField label="IFSC Code" value={profile.ifsc_code} />
       <CopyableField label="UPI ID" value={profile.upi_id} />
     </div>
+  );
+}
+
+function UserDetailDialog({ user, open, onOpenChange }: { user: Profile | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  if (!user) return null;
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast.success('Copied!');
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  const CopyBtn = ({ value, field }: { value: string; field: string }) => (
+    <button onClick={() => copyToClipboard(value, field)} className="p-1.5 rounded hover:bg-muted transition-colors">
+      {copiedField === field ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+    </button>
+  );
+
+  const DetailRow = ({ label, value, field, mono }: { label: string; value?: string | null; field: string; mono?: boolean }) => {
+    if (!value) return null;
+    return (
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className={`text-sm ${mono ? 'font-mono' : 'font-medium'}`}>{value}</p>
+        </div>
+        <CopyBtn value={value} field={field} />
+      </div>
+    );
+  };
+
+  const hasBankDetails = !!(user.bank_account_holder_name || user.bank_name || user.bank_account_number || user.ifsc_code);
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>User Details</AlertDialogTitle>
+          <AlertDialogDescription className="sr-only">Full user profile information</AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-4">
+          {/* Personal Info */}
+          <div className="space-y-3">
+            <Label className="text-xs text-muted-foreground">Personal Info</Label>
+            <DetailRow label="Name" value={user.name} field="name" />
+            <DetailRow label="Email" value={user.email} field="email" />
+            <DetailRow label="Phone" value={user.phone} field="phone" />
+            <div className="text-xs text-muted-foreground">
+              Joined {format(new Date(user.created_at), 'MMM d, yyyy')}
+            </div>
+          </div>
+
+          {/* Bank Details */}
+          <div className="border-t border-border pt-4 space-y-3">
+            <Label className="text-xs text-muted-foreground">Bank Details</Label>
+            {hasBankDetails ? (
+              <>
+                <DetailRow label="Account Holder" value={user.bank_account_holder_name} field="holder" />
+                <DetailRow label="Bank Name" value={user.bank_name} field="bank" />
+                <DetailRow label="Account Number" value={user.bank_account_number} field="account" mono />
+                <DetailRow label="IFSC Code" value={user.ifsc_code} field="ifsc" mono />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No bank details saved</p>
+            )}
+          </div>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>Close</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
