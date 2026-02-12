@@ -20,10 +20,10 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const profileSchema = z.object({
   name: z.string().max(50, 'Name must be less than 50 characters').optional(),
-  bank_account_holder_name: z.string().max(50, 'Holder name too long').optional(),
-  bank_account_number: z.string().max(30, 'Account number too long').optional(),
-  ifsc_code: z.string().max(20, 'IFSC code too long').optional(),
-  bank_name: z.string().max(50, 'Bank name too long').optional(),
+  bank_account_holder_name: z.string().min(1, 'Account holder name is required').max(50, 'Holder name too long'),
+  bank_account_number: z.string().min(1, 'Account number is required').max(30, 'Account number too long'),
+  ifsc_code: z.string().min(1, 'IFSC code is required').max(20, 'IFSC code too long'),
+  bank_name: z.string().min(1, 'Bank name is required').max(50, 'Bank name too long'),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
