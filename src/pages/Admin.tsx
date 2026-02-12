@@ -502,6 +502,34 @@ function TicketAdminCard({
     onDelete?.();
   };
 
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyValue = async (e: React.MouseEvent, text: string, field: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  const CopyBtn = ({ value, field }: { value: string; field: string }) => (
+    <button
+      onClick={(e) => copyValue(e, value, field)}
+      className="p-1 rounded hover:bg-muted transition-colors"
+    >
+      {copiedField === field ? (
+        <Check className="h-3.5 w-3.5 text-success" />
+      ) : (
+        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+      )}
+    </button>
+  );
+
+  const hasBankDetails = profile?.bank_account_holder_name || profile?.bank_name || profile?.bank_account_number || profile?.ifsc_code;
+
   return (
     <div className="mobile-card w-full transition-all hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -539,6 +567,37 @@ function TicketAdminCard({
           </div>
         </div>
       </div>
+
+      {/* Bank Details */}
+      {hasBankDetails && (
+        <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">Bank Details</p>
+          {profile.bank_account_holder_name && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Holder: <span className="text-foreground font-medium">{profile.bank_account_holder_name}</span></p>
+              <CopyBtn value={profile.bank_account_holder_name} field={`holder-${ticket.id}`} />
+            </div>
+          )}
+          {profile.bank_name && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Bank: <span className="text-foreground font-medium">{profile.bank_name}</span></p>
+              <CopyBtn value={profile.bank_name} field={`bank-${ticket.id}`} />
+            </div>
+          )}
+          {profile.bank_account_number && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">A/C: <span className="text-foreground font-mono font-medium">{profile.bank_account_number}</span></p>
+              <CopyBtn value={profile.bank_account_number} field={`acc-${ticket.id}`} />
+            </div>
+          )}
+          {profile.ifsc_code && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">IFSC: <span className="text-foreground font-mono font-medium">{profile.ifsc_code}</span></p>
+              <CopyBtn value={profile.ifsc_code} field={`ifsc-${ticket.id}`} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
