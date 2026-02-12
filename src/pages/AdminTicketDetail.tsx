@@ -389,7 +389,25 @@ function BankDetailsSection({ profile }: { profile: Profile }) {
 
   return (
     <div className="space-y-3">
-      <Label className="text-xs text-muted-foreground">Bank Details</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Bank Details</Label>
+        <button
+          onClick={() => {
+            const parts: string[] = [];
+            if (profile.bank_account_holder_name) parts.push(`Holder: ${profile.bank_account_holder_name}`);
+            if (profile.bank_name) parts.push(`Bank: ${profile.bank_name}`);
+            if (profile.bank_account_number) parts.push(`A/C: ${profile.bank_account_number}`);
+            if (profile.ifsc_code) parts.push(`IFSC: ${profile.ifsc_code}`);
+            navigator.clipboard.writeText(parts.join('\n')).then(() => {
+              setCopiedField('all');
+              setTimeout(() => setCopiedField(null), 2000);
+            }).catch(() => toast.error('Failed to copy'));
+          }}
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          {copiedField === 'all' ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy All</>}
+        </button>
+      </div>
       
       {profile.bank_account_holder_name && (
         <div className="flex items-center justify-between">
